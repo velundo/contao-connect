@@ -128,9 +128,11 @@ final class FakeSlugger implements SluggerInterface
 
 final class FakeSystemInfo implements SystemInfoInterface
 {
+    public function __construct(private readonly string $version = '5.3.12') {}
+
     public function contaoVersion(): string
     {
-        return '5.3.12';
+        return $this->version;
     }
 
     public function bundles(): array
@@ -160,7 +162,7 @@ final class TestSite
     public int $now = 1_791_626_400; // 2026-10-10 10:00 UTC
 
     /** @param array<string, mixed> $settings */
-    public function __construct(array $settings = [], bool $news = true, bool $httpCache = true)
+    public function __construct(array $settings = [], bool $news = true, bool $httpCache = true, string $contaoVersion = '5.3.12')
     {
         $this->connection = new Connection();
         self::schema($this->connection->pdo);
@@ -179,7 +181,7 @@ final class TestSite
         $tree = new PageTree($db);
         $urls = new FakeUrls();
         $text = new TextField($settingsObj, new HtmlSanitizer());
-        $system = new FakeSystemInfo();
+        $system = new FakeSystemInfo($contaoVersion);
         $this->kernel = new ApiKernel(new Router(), $this->tokens, new RateLimiter(new DbalRateStore($this->connection), $settingsObj, $clock), $settingsObj, $log, $this->logger, [
             'info' => new InfoHandler($db, $system, $features, $settingsObj),
             'system' => new SystemHandler($db, $system, $settingsObj),
@@ -191,7 +193,7 @@ final class TestSite
             'seo' => new SeoHandler($tree, $urls),
             'search' => new SearchHandler($db, $tree, $features, $urls),
             'cache' => new CacheHandler($writer),
-        ]);
+        ], $system);
     }
 
     /**

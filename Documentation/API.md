@@ -1,7 +1,7 @@
 # velundo ↔ Contao – Schnittstellenvertrag v1
 
 Zwei Seiten: (1) Contao-Bundle `velundo/contao-connect` (Composer, Typ `contao-bundle`), das der Kunde bzw. die Agentur in
-der Contao-Installation (Contao 5.3 LTS oder neuer, PHP ≥ 8.2) installiert; (2) Modul `contao` in der velundo-App, das diese
+der Contao-Installation (Contao 5.3 LTS oder neuer einschließlich Contao 6, PHP ≥ 8.2) installiert; (2) Modul `contao` in der velundo-App, das diese
 API nutzt. Beide Seiten halten sich wörtlich an diesen Vertrag. Marke klein „velundo“. Keine Hinweise auf Betreiber/Firma.
 
 ## Transport
@@ -32,9 +32,10 @@ API nutzt. Beide Seiten halten sich wörtlich an diesen Vertrag. Marke klein „
 - Sichtbarkeit: `?visibility=all|visible|hidden` (Standard `all`). „sichtbar“ heißt `published = true` bei Seiten,
   Artikeln und Nachrichten bzw. `invisible = false` bei Inhaltselementen – die Zeitsteuerung (`start`/`stop`) wird
   getrennt gemeldet und nicht ausgewertet.
-- Texte: Klartextfelder (Titel, Seitentitel, Überschriften, Beschreibungen) liefert die API dekodiert (Contao speichert
-  Sonderzeichen als Entitäten, z. B. `&#40;`); beim Schreiben kodiert das Bundle sie wie das Contao-Backend
-  (`#<>()\="'` bzw. bei Beschreibungen nur `<`). HTML-Felder (`text`, `teaser`) kommen als HTML.
+- Texte: Klartextfelder (Titel, Seitentitel, Überschriften, Beschreibungen) liefert die API als Klartext. Beim Schreiben
+  speichert das Bundle sie wie das Contao-Backend der jeweiligen Version: Contao 5 kodiert Sonderzeichen als Entitäten
+  (`#<>()\="'` bzw. bei Beschreibungen nur `<`, z. B. `&#40;`), Contao 6 speichert roh und kodiert erst bei der Ausgabe.
+  HTML-Felder (`text`, `teaser`) kommen als HTML.
 
 ## Lesen
 - `GET info` → `{"contao":"5.3.12","php":"8.3.x","bundle":"1.0.0","roots":[{"id":1,"title":"…","dns":"www.example.de","language":"de","fallback":true,"published":true,"maintenance":false,"base":"https://www.example.de/"}],"features":{"news":bool,"calendar":bool,"http_cache":bool},"limits":{"max_text_kb":200,"rate_limit_per_minute":120,"limit_max":200}}`
@@ -76,7 +77,8 @@ Jede Änderung setzt `tstamp`, legt einen Versionseintrag an (`tl_version` über
 „velundo“ – Wiederherstellen im Backend unter „Versionen“), schreibt einen Eintrag ins Contao-Protokoll (`tl_log`,
 Kanal `contao.general`, Text „velundo: … – Token „<Bezeichnung>““ mit Tabelle, ID und Feldnamen, keine Inhalte) und
 invalidiert die Cache-Tags der betroffenen Datensätze (`contao.db.<tabelle>.<id>` und Elternsatz, z. B.
-`contao.db.tl_article.<pid>`; nur wenn der HTTP-Cache von Contao eingerichtet ist). Jede Schreibantwort enthält
+`contao.db.tl_article.<pid>`; Contao 6 über `contao.cache.tag_manager`, Contao 5 über den FOS-Cache-Manager; nur wenn
+der HTTP-Cache von Contao eingerichtet ist). Jede Schreibantwort enthält
 `"before": {…}` mit den vorherigen Werten der geänderten Felder (API-Darstellung; für den Ist-Vergleich der App).
 
 - `PATCH pages/{id}` Body: Teilmenge von `title, pageTitle, description, robots, published, hide` → 200 mit der Seite wie `GET pages/{id}`.

@@ -58,10 +58,11 @@ services:
         arguments:
             $router: '@router'
 
-    # Ohne eingerichteten HTTP-Cache gibt es den Cache-Manager nicht (dann null)
+    # Ohne eingerichteten HTTP-Cache gibt es den Cache-Manager nicht (dann null); den Tag-Manager gibt es ab Contao 6
     Velundo\ContaoConnect\Service\Contao\FosCacheInvalidator:
         arguments:
             $cacheManager: '@?fos_http_cache.cache_manager'
+            $tagManager: '@?contao.cache.tag_manager'
 
     Velundo\ContaoConnect\Api\ApiKernel:
         arguments:
@@ -76,6 +77,8 @@ services:
                 seo: '@Velundo\ContaoConnect\Api\SeoHandler'
                 search: '@Velundo\ContaoConnect\Api\SearchHandler'
                 cache: '@Velundo\ContaoConnect\Api\CacheHandler'
+            # Contao-Version entscheidet über die Speicherform der Klartextfelder (Contao 6: roh)
+            $system: '@Velundo\ContaoConnect\Service\Contao\SystemInfoInterface'
 
     # Controller werden über den Container geholt und müssen öffentlich sein
     Velundo\ContaoConnect\Controller\ApiController:

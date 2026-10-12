@@ -14,6 +14,11 @@ use Velundo\ContaoConnect\Http\Validate;
  * `#<>()\="'` als numerische Entitäten (Modus encodeAll), Felder mit decodeEntities (z. B. description) nur `<`
  * (encodeLessThanSign); `&` bleibt. Basis-Entitäten ([nbsp], [-], [&] …) stehen für &nbsp;, &shy; usw.
  * Die API liest dekodiert und schreibt kodiert wie das Backend – so sieht die Ausgabe im Frontend gleich aus.
+ *
+ * Contao 6 speichert Klartextfelder dagegen roh und kodiert erst bei der Ausgabe (Widget::getPost() liest den Wert
+ * unverändert, die Migration Version600\OutputEncodingMigration dekodiert ältere Bestände). Ab Contao 6 schreibt die API
+ * deshalb roh (rawStorage) und löst beim Lesen nur die Basis-Entitäten auf. Umgeschaltet wird je Anfrage nach der
+ * Hauptversion von Contao (ApiKernel).
  */
 final class PlainText
 {
@@ -21,18 +26,39 @@ final class PlainText
     public const ENCODE_LT = 'lt';
 
     private const BASIC_ENTITIES = ['[&]' => '&amp;', '[&amp;]' => '&amp;', '[lt]' => '&lt;', '[gt]' => '&gt;', '[nbsp]' => '&nbsp;', '[-]' => '&shy;'];
+    private const BASIC_CHARS = ['[&]' => '&', '[&amp;]' => '&', '[lt]' => '<', '[gt]' => '>', '[nbsp]' => "\u{00A0}", '[-]' => "\u{00AD}"];
+
+    /** Speicherform: false = kodiert wie Contao 5, true = roh wie Contao 6. */
+    private static bool $rawStorage = false;
+
+    /** Speicherform nach der Hauptversion von Contao wählen („6.0.3“ → roh). */
+    public static function useStorageOf(string $contaoVersion): void
+    {
+        self::$rawStorage = preg_match('/^(\d+)\./', $contaoVersion, $m) === 1 && (int)$m[1] >= 6;
+    }
+
+    public static function rawStorage(): bool
+    {
+        return self::$rawStorage;
+    }
 
     /** Gespeicherter Wert → Klartext für die API. */
     public static function decode(?string $stored): string
     {
+        if (self::$rawStorage) {
+            return strtr((string)$stored, self::BASIC_CHARS);
+        }
         $value = strtr((string)$stored, self::BASIC_ENTITIES);
         return html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
     }
 
-    /** Klartext → Speicherform wie Input::encodeInput() im Backend. */
+    /** Klartext → Speicherform wie das Backend (Contao 5: Input::encodeInput(), Contao 6: roh). */
     public static function encode(string $text, string $mode = self::ENCODE_ALL): string
     {
         $text = (string)preg_replace('(\r\n?)', "\n", $text);
+        if (self::$rawStorage) {
+            return str_replace("\0", "\u{FFFD}", $text);
+        }
         $text = $mode === self::ENCODE_LT
             ? str_replace('<', '&#60;', $text)
             : str_replace(['#', '<', '>', '(', ')', '\\', '=', '"', "'"], ['&#35;', '&#60;', '&#62;', '&#40;', '&#41;', '&#92;', '&#61;', '&#34;', '&#39;'], $text);

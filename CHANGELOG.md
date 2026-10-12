@@ -17,4 +17,6 @@ Erste Fassung nach Schnittstellenvertrag v1 (`Documentation/API.md`).
   `POST/PATCH news` (neu immer unveröffentlicht, Text als Inhaltselement), `POST cache/clear`; jede Antwort mit `before`.
 - Klartextfelder kodiert wie das Backend (`Input::encodeInput`), HTML über eigene Grobreinigung und `Input::stripTags()`
   mit den erlaubten Tags der Installation; Insert-Tags nur als Verweise.
-- Prüfungen: `Tests/Unit` und `Tests/smoke.php` ohne Contao, die Endpunkte gegen SQLite.
+- Contao 5.3 und 6 (`contao/core-bundle ^5.3 || ^6.0`, Symfony 6.4–8, DBAL 3/4): Klartextfelder unter Contao 6 roh
+  gespeichert (Ausgabe-Escaping), Cache-Tags unter Contao 6 über `contao.cache.tag_manager`; DCA in Array-Schreibweise.
+- Prüfungen: `Tests/Unit` und `Tests/smoke.php` ohne Contao, die Endpunkte gegen SQLite (auch im Modus Contao 6).

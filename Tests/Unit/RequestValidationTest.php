@@ -110,6 +110,7 @@ final class RequestValidationTest extends TestCase
 
     public function testPlainTextFieldsAreCheckedAndEncodedLikeTheBackend(): void
     {
+        PlainText::useStorageOf('5.3.12');
         self::assertSame('Über uns &#40;Team&#41; &#35;1 &#60;b&#62; A & B &#61; &#34;x&#34; &#39;y&#39; &#92;', PlainText::encode('Über uns (Team) #1 <b> A & B = "x" \'y\' \\'));
         self::assertSame('a &#60;b> (c)', PlainText::encode('a <b> (c)', PlainText::ENCODE_LT));
         self::assertSame('Über uns (Team) #1 <b> A & B', PlainText::decode('Über uns &#40;Team&#41; &#35;1 &#60;b&#62; A & B'));

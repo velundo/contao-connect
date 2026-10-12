@@ -12,6 +12,8 @@ use Velundo\ContaoConnect\Service\LogService;
 use Velundo\ContaoConnect\Service\RateLimiter;
 use Velundo\ContaoConnect\Service\Router;
 use Velundo\ContaoConnect\Service\Settings;
+use Velundo\ContaoConnect\Service\Contao\SystemInfoInterface;
+use Velundo\ContaoConnect\Service\PlainText;
 use Velundo\ContaoConnect\Service\TokenService;
 
 /**
@@ -30,6 +32,7 @@ final class ApiKernel
         private readonly LogService $log,
         private readonly LoggerInterface $logger,
         private readonly array $handlers,
+        private readonly ?SystemInfoInterface $system = null,
     ) {}
 
     /**
@@ -41,6 +44,10 @@ final class ApiKernel
         $tokenName = null;
         $status = 500;
         try {
+            // Speicherform der Klartextfelder: Contao 5 kodiert, Contao 6 roh (PlainText)
+            if ($this->system !== null) {
+                PlainText::useStorageOf($this->system->contaoVersion());
+            }
             $result = $this->dispatch($method, $apiPath, $query, $body, $authorization, $velundoToken, $secure, $host, $tokenName);
             $status = $result->status;
             return ['status' => $result->status, 'data' => $result->data, 'headers' => $result->headers];

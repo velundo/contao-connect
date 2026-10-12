@@ -5,7 +5,7 @@ SEO-Felder und Nachrichten (contao/news-bundle) und ändert sie – gezielt, mit
 Verbindlich ist der Schnittstellenvertrag in `Documentation/API.md`.
 
 - Composer-Paket `velundo/contao-connect`, Typ `contao-bundle`, Namespace `Velundo\ContaoConnect`
-- Contao 5.3 LTS oder neuer, PHP ≥ 8.2, Lizenz LGPL-3.0-or-later
+- Contao 5.3 LTS oder neuer, auch Contao 6 (`contao/core-bundle ^5.3 || ^6.0`), PHP ≥ 8.2, Lizenz LGPL-3.0-or-later
 - Endpunktbasis: `https://<host>/_velundo/v1/` (läuft Contao in einem Unterverzeichnis: `https://<host>/<pfad>/_velundo/v1/`)
 
 ## Installation
@@ -94,7 +94,7 @@ Inhaltselement), `PATCH news/{id}` (headline, teaser, text, date, published, pag
 - Jede Änderung setzt `tstamp`, legt eine Version an (`tl_version`, Benutzer „velundo“ – im Backend unter „Versionen“
   vergleichen und wiederherstellen), schreibt ins Contao-Protokoll und invalidiert die Cache-Tags
   `contao.db.<tabelle>.<id>` des Datensatzes und seines Elternsatzes (nur mit eingerichtetem HTTP-Cache).
-- Klartextfelder werden wie im Backend kodiert gespeichert (`Input::encodeInput`), HTML wird bereinigt (eigene Grobreinigung,
+- Klartextfelder werden wie im Backend gespeichert (Contao 5 kodiert, Contao 6 roh – siehe unten), HTML wird bereinigt (eigene Grobreinigung,
   danach `Input::stripTags()` mit den erlaubten Tags und Attributen der Installation). Insert-Tags nur als Verweise
   (`{{link_url::…}}` usw.).
 - Nachrichten nur mit `contao/news-bundle` – sonst `404 feature_unavailable`; `GET info` nennt die Bereiche unter `features`.
@@ -120,12 +120,29 @@ Inhaltselement), `PATCH news/{id}` (headline, teaser, text, date, published, pag
 - Rechte: Wer ein Token hat, kann alle oben genannten Felder aller Websites der Installation lesen und ändern. Tokens
   deshalb je Agentur/Verbindung einzeln erzeugen und bei Bedarf widerrufen.
 
+## Contao 5.3 und 6
+
+Das Bundle läuft mit Contao 5.3 LTS und Contao 6 (geprüft gegen die Quellen von 5.3.52 und 6.0.4: alle Klassen laden,
+Konfiguration, Route und Manager-Plugin funktionieren). Unterschiede, die das Bundle berücksichtigt:
+
+| Bereich | Contao 5 | Contao 6 | Im Bundle |
+|---|---|---|---|
+| Klartextfelder (title, pageTitle, headline, description) | kodiert gespeichert (`Input::encodeInput`, z. B. `&#40;`) | roh gespeichert, Escaping erst bei der Ausgabe (`Widget::getPost`, Migration `Version600\OutputEncodingMigration`) | `PlainText` schaltet je Anfrage nach der Hauptversion um: Contao 5 kodiert, Contao 6 roh; beim Lesen werden Contao-5-Werte dekodiert, Contao-6-Werte nur von Basis-Entitäten befreit |
+| Cache-Tags | `fos_http_cache.cache_manager` (DataContainer::invalidateCacheTags) | `contao.cache.tag_manager` (`CacheTagManager::invalidateTags`, Ereignis `InvalidateCacheTagsEvent`) | Tag-Manager, wenn vorhanden, sonst der FOS-Cache-Manager |
+| Symfony / DBAL | 6.4 / 3.x | 8.x / 4.x | nur Methoden, die in beiden Ständen gleich sind |
+| DCA-Spalten | Zeichenketten und Arrays | Arrays (Zeichenketten weiter gelesen) | Array-Schreibweise in `contao/dca/*` |
+
+Unverändert in 6.0: Spalten und Speicherformat der genutzten Felder (`tl_content.headline` weiter serialisiert
+`{value, unit}`, `ptable`, `invisible`, `tl_news.date/time`, Nachrichtentext als Inhaltselemente), `Contao\Versions`,
+`ContaoContext` und Kanal `contao.general`, Content-URL-Generator, Slug-Dienst, `Input::stripTags()`, Manager-Plugin.
+
 ## Live zu prüfen
 
-Gebaut gegen die Quellen von Contao 5.3 (Klassen und Signaturen geprüft), noch ohne laufende Installation:
-Anlage der Tabellen mit `contao:migrate`, Versionseinträge (`Contao\Versions` außerhalb des Backends), Protokoll in
-`tl_log`, Adressen über den Content-URL-Generator (Seiten, Nachrichten), Slug-Erzeugung, Cache-Tags mit dem
-HTTP-Cache, Darstellung kodierter Titel im Frontend und Backend, `Input::stripTags()` mit den erlaubten Tags.
+Noch ohne laufende Installation gebaut: Anlage der Tabellen mit `contao:migrate`, Versionseinträge (`Contao\Versions`
+außerhalb des Backends), Protokoll in `tl_log`, Adressen über den Content-URL-Generator (Seiten, Nachrichten),
+Slug-Erzeugung, Cache-Tags mit dem HTTP-Cache (unter Contao 6: ob `fos_http_cache.cache_manager` in der Managed Edition
+weiter registriert ist – sonst meldet `features.http_cache` false), Darstellung der gespeicherten Titel im Frontend und
+Backend (Contao 5 kodiert, Contao 6 roh), `Input::stripTags()` mit den erlaubten Tags.
 
 ## Entwicklung
 
