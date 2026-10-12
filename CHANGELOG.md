@@ -1,0 +1,20 @@
+# Änderungen
+
+## 1.0.0 – 2026-10-12
+
+Erste Fassung nach Schnittstellenvertrag v1 (`Documentation/API.md`).
+
+- Route `/_velundo/{path}` außerhalb von Contao-Frontend und -Backend (keine Firewall, keine Session, keine CSRF-Prüfung):
+  Token (`Authorization: Bearer` oder `X-Velundo-Token`), HTTPS-Pflicht (außer `APP_ENV=dev`), Ratenbegrenzung je Token
+  (Standard 120/min, 429 mit `Retry-After`), einheitliches Fehlerformat, Köpfe `X-Velundo-Api: 1` und `Cache-Control: no-store`.
+- Tokens nur als SHA-256-Hash in `tl_velundo_token`, Zähler in `tl_velundo_rate` (DCA unter `contao/dca/`, Anlage mit
+  `contao:migrate`); Konsole `velundo:token create|list|revoke`.
+- Lesen: `info`, `system`, `pages` (Baum mit `root`, `parent`, `depth`, `search`, `visibility`), `pages/{id}` mit Artikeln,
+  `articles?page=`, `content?article=|news=`, `content/{id}`, `news_archives`, `news`, `news/{id}` mit Textelementen,
+  `seo/overview`, `search?q=`; Adressen über den Content-URL-Generator.
+- Schreiben direkt in der Datenbank mit `tstamp`, Version (`Contao\Versions`, Benutzer „velundo“), Protokoll (`tl_log`,
+  Kanal `contao.general`) und Cache-Tags: `PATCH pages/{id}`, `POST/PATCH content` (neu immer unsichtbar),
+  `POST/PATCH news` (neu immer unveröffentlicht, Text als Inhaltselement), `POST cache/clear`; jede Antwort mit `before`.
+- Klartextfelder kodiert wie das Backend (`Input::encodeInput`), HTML über eigene Grobreinigung und `Input::stripTags()`
+  mit den erlaubten Tags der Installation; Insert-Tags nur als Verweise.
+- Prüfungen: `Tests/Unit` und `Tests/smoke.php` ohne Contao, die Endpunkte gegen SQLite.

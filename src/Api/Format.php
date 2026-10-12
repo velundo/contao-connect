@@ -73,7 +73,7 @@ final class Format
             'id' => (int)$row['id'],
             'pid' => (int)$row['pid'],
             'ptable' => (string)($row['ptable'] ?? '') !== '' ? (string)$row['ptable'] : 'tl_article',
-            'type' => (string)$row['type'],
+            'type' => (string)($row['type'] ?? ''),
             'headline' => PlainText::decode($headline),
             'headline_unit' => $unit,
             'text_plain' => PlainText::fromHtml($text, 2000),
@@ -81,7 +81,7 @@ final class Format
             'invisible' => Db::flag($row['invisible'] ?? 0),
             'start' => Db::iso($row['start'] ?? ''),
             'stop' => Db::iso($row['stop'] ?? ''),
-            'sorting' => (int)$row['sorting'],
+            'sorting' => (int)($row['sorting'] ?? 0),
             'tstamp' => Db::iso($row['tstamp'] ?? 0),
         ];
     }

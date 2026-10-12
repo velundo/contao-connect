@@ -72,7 +72,7 @@ final class PlainText
         $text = (string)preg_replace('#<(script|style)\b[^>]*>.*?</\1\s*>#is', ' ', $html);
         $text = (string)preg_replace('#<(br|/p|/div|/li|/h[1-6]|/tr|/td|/th)\b[^>]*>#i', ' ', $text);
         $text = html_entity_decode(strip_tags($text), ENT_QUOTES | ENT_HTML5, 'UTF-8');
-        $text = trim((string)preg_replace('/\s+/u', ' ', $text));
+        $text = trim((string)preg_replace('/[\s\x{00A0}\x{00AD}]+/u', ' ', $text));
         if ($maxLength > 0 && mb_strlen($text) > $maxLength) {
             $text = rtrim(mb_substr($text, 0, $maxLength - 1)) . '…';
         }

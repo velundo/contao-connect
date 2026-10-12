@@ -56,7 +56,7 @@ final class SearchHandler implements HandlerInterface
         }
 
         $like = Db::contains($term);
-        $sql = 'SELECT c.id, c.pid, c.ptable, c.type, c.headline, c.text, c.invisible FROM tl_content c'
+        $sql = 'SELECT c.id, c.pid, c.ptable, c.type, c.headline, c.text, c.invisible, c.start, c.stop, c.sorting, c.tstamp FROM tl_content c'
             . " WHERE (c.headline LIKE ? ESCAPE '!' OR c.text LIKE ? ESCAPE '!')" . Format::visibilitySql('c.invisible', $mode, true);
         $params = [$like, $like];
         if ($root > 0) {
