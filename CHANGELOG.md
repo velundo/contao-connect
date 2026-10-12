@@ -1,5 +1,13 @@
 # Änderungen
 
+## 1.0.1 – 2026-10-12
+
+Befund aus dem Livetest mit Contao 6.0.3.
+
+- **Protokoll nur für Änderungen:** Jeder Aufruf – auch jeder Lesezugriff – stand bisher im Contao-Protokoll, Änderungen
+  doppelt. Jetzt nur noch Änderungen (Tabelle, ID, Felder) und abgelehnte Schreibversuche; regelmäßige Abfragen fluten
+  die Systemmeldungen nicht mehr.
+
 ## 1.0.0 – 2026-10-12
 
 Erste Fassung nach Schnittstellenvertrag v1 (`Documentation/API.md`).

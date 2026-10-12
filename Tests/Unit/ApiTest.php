@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Velundo\ContaoConnect\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
+use Velundo\ContaoConnect\Api\InfoHandler;
 use Velundo\ContaoConnect\Tests\Support\TestSite;
 
 /**
@@ -42,7 +43,10 @@ final class ApiTest extends TestCase
         self::assertSame(400, $r['status']);
         self::assertSame('invalid_json', $r['data']['error']['code']);
         $log = $this->site->logger->text();
-        self::assertStringContainsString('velundo: GET /v1/info → 200 – Token „Agentur Test“', $log);
+        // Lesezugriffe nicht im Protokoll, abgelehnte Schreibversuche schon (Livetest: sonst flutet jede Abfrage tl_log)
+        self::assertStringNotContainsString('GET /v1/info', $log);
+        self::assertStringContainsString('velundo: PATCH /v1/pages/2 → 400 – Token „Agentur Test“', $log);
+        self::assertStringContainsString('velundo: DELETE /v1/pages/2', $log);
         self::assertStringNotContainsString('falsches-token', $log);
     }
 
@@ -63,7 +67,7 @@ final class ApiTest extends TestCase
         $r = $this->site->call('GET', 'v1/info');
         self::assertSame(200, $r['status']);
         self::assertSame('5.3.12', $r['data']['contao']);
-        self::assertSame('1.0.0', $r['data']['bundle']);
+        self::assertSame(InfoHandler::BUNDLE_VERSION, $r['data']['bundle']);
         self::assertSame(['news' => true, 'calendar' => false, 'http_cache' => true], $r['data']['features']);
         self::assertSame(['max_text_kb' => 200, 'rate_limit_per_minute' => 1000, 'limit_max' => 200], $r['data']['limits']);
         self::assertCount(2, $r['data']['roots']);

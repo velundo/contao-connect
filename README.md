@@ -112,9 +112,10 @@ Inhaltselement), `PATCH news/{id}` (headline, teaser, text, date, published, pag
 - Nur HTTPS (außer `APP_ENV=dev`). Token-Vergleich in konstanter Zeit (`hash_equals` über alle Einträge), 401 ohne Details.
 - Die Route liegt außerhalb der Contao-Bereiche: keine Firewall, keine Session, kein Cookie, keine CSRF-Prüfung
   (`_token_check: false`), Antworten mit `Cache-Control: no-store`.
-- **Protokollierung:** Jeder Aufruf mit gültigem Token steht im Contao-Protokoll (Kategorie „Allgemein“, Text
-  `velundo: <Methode> <Pfad> → <Status> – Token „<Bezeichnung>“`), Änderungen zusätzlich mit Tabelle, ID und geänderten
-  Feldnamen – keine Inhalte. Anfragen ohne gültiges Token und 429-Antworten werden nicht protokolliert.
+- **Protokollierung:** Jede Änderung steht im Contao-Protokoll (Kategorie „Allgemein“, Text `velundo: …` mit Tabelle,
+  ID und geänderten Feldnamen – keine Inhalte), ebenso abgelehnte Schreibversuche mit gültigem Token
+  (`velundo: <Methode> <Pfad> → <Status> – Token „<Bezeichnung>“`). Lesezugriffe, Anfragen ohne gültiges Token und
+  429-Antworten werden nicht protokolliert – regelmäßige Abfragen fluten das Protokoll so nicht.
 - Die Schnittstelle gibt keine Pfade, Zugangsdaten oder Konfigurationswerte aus; `GET system` nennt Versionen, Bundles
   und Pakete.
 - Rechte: Wer ein Token hat, kann alle oben genannten Felder aller Websites der Installation lesen und ändern. Tokens

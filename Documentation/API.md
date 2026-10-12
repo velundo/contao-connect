@@ -22,7 +22,7 @@ API nutzt. Beide Seiten halten sich wörtlich an diesen Vertrag. Marke klein „
 - Ratenbegrenzung im Bundle: 120 Anfragen je Minute je Token (Einstellung `rate_limit_per_minute`) → 429 mit
   `Retry-After`. Der Zähler steht in der Tabelle `tl_velundo_rate` und wird per atomarem `UPDATE … SET hits = hits + 1`
   geführt; bei gleichzeitigen Anfragen kann die Grenze um einzelne Anfragen strenger greifen, nie weicher.
-  429-Antworten werden nicht ins Contao-Protokoll geschrieben.
+  429-Antworten werden nicht ins Contao-Protokoll geschrieben (siehe unten: Protokoll nur für Änderungen).
 - Paginierung: `?limit=` (≤ 200, Standard 50) und `?offset=`; Antwort `{"items":[…],"total":n,"limit":l,"offset":o}`.
 - Zeiten als ISO 8601 mit Versatz (Zeitzone der Installation); leere Zeitsteuerung (`start`, `stop`) → `null`.
   Kennungen sind Contao-`id` (int). Eingaben für Zeitpunkte (`date`) nur nach ISO 8601 (`2026-10-10`,
@@ -121,5 +121,5 @@ der HTTP-Cache von Contao eingerichtet ist). Jede Schreibantwort enthält
 ## Sicherheit
 - Nur Felder dieses Vertrags; keine Benutzer-, Datei-, Layout- oder Konfigurationszugriffe; keine Löschungen; der Pfad
   `/_velundo/` antwortet ohne Token nur 401 (keine Versionsangaben).
-- Das Bundle protokolliert jeden Aufruf mit gültigem Token in `tl_log` („velundo: GET pages → 200 – Token „…““) und
-  Änderungen zusätzlich mit Tabelle, ID und Feldnamen – keine Inhalte; 429-Antworten ausgenommen.
+- Das Bundle protokolliert in `tl_log` jede Änderung mit Tabelle, ID und Feldnamen (keine Inhalte) sowie abgelehnte
+  Schreibversuche mit gültigem Token („velundo: PATCH pages/5 → 422 – Token „…““); Lesezugriffe und 429-Antworten nicht.

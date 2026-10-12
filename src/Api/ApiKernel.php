@@ -66,7 +66,9 @@ final class ApiKernel
             $details = $this->settings->isDevelopment() ? ['exception' => get_class($e), 'message' => $e->getMessage(), 'file' => basename($e->getFile()) . ':' . $e->getLine()] : [];
             return ['status' => 500, 'data' => (new ApiException(500, 'internal_error', 'Interner Fehler in der Schnittstelle.', $details))->toArray(), 'headers' => []];
         } finally {
-            if ($tokenName !== null && $status !== 429) {
+            // Nur abgelehnte Schreibversuche als Aufrufzeile – erfolgreiche Änderungen protokolliert der Endpunkt selbst
+            // (Tabelle, ID, Felder), Lesezugriffe gar nicht (Livetest: sonst flutet jede Abfrage das Contao-Protokoll)
+            if ($tokenName !== null && $method !== 'GET' && $status >= 400 && $status !== 429) {
                 $this->log->log(sprintf('%s /%s → %d', strtoupper($method), $apiPath, $status), $tokenName);
             }
         }

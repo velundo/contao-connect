@@ -18,7 +18,7 @@ use Velundo\ContaoConnect\Service\Settings;
 final class InfoHandler implements HandlerInterface
 {
     // Muss composer.json (extra.velundo-version) und CHANGELOG.md entsprechen (Prüfung VersionTest)
-    public const BUNDLE_VERSION = '1.0.0';
+    public const BUNDLE_VERSION = '1.0.1';
 
     public function __construct(
         private readonly Db $db,
