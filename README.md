@@ -161,3 +161,10 @@ HTML-Positivliste, Systemangaben), `src/Service/Store/*` (Tabellen und Prüf-Ers
 ## Lizenz
 
 LGPL-3.0-or-later, siehe `LICENSE`.
+
+## Fehler, Fragen, Sicherheit
+
+- Fehler in das Bundle bitte als [Issue](https://github.com/velundo/contao-connect/issues) melden – ohne Zugangsdaten, Tokens oder
+  Inhalte von Kundenwebsites (Issues sind öffentlich).
+- Fragen zur velundo-App, zu Konto oder Abo: [velundo.app/hilfe](https://velundo.app/hilfe) oder hello@velundo.app.
+- Sicherheitslücken bitte vertraulich melden, siehe [SECURITY.md](SECURITY.md).
