@@ -44,8 +44,8 @@ API nutzt. Beide Seiten halten sich wörtlich an diesen Vertrag. Marke klein „
   keine Pfade, keine Geheimnisse, keine Konfigurationswerte)
 - `GET pages?root&parent=<id>&depth=1..20&search=&visibility&limit&offset` → Seiten in Baumreihenfolge (Tiefensuche nach
   `sorting`); items: `id, pid, root, level, type, title, alias, url, published, hide, robots, pageTitle, description, start, stop, tstamp, language, sorting`.
-  `parent` liefert den Teilbaum unter dieser Seite (ohne die Seite selbst), `depth` die Zahl der Ebenen (Standard 20 =
-  alles). `search` sucht in `title`, `pageTitle` und `alias`. `visibility` filtert die Ergebniszeilen, nicht den Baum.
+  `parent` liefert den Teilbaum unter dieser Seite (ohne die Seite selbst), `depth` die Zahl der Ebenen darunter
+  (Standard 20 = alles); ohne `parent` zählen die Startpunkte als erste Ebene (`depth=1` = nur Startpunkte). `search` sucht in `title`, `pageTitle` und `alias`. `visibility` filtert die Ergebniszeilen, nicht den Baum.
   `url` ist die absolute Adresse (Content-URL-Generator von Contao), `null` wenn Contao keine erzeugt (Ordner-,
   Weiterleitungs- oder Fehlerseiten ohne Ziel). `level`: 0 = Startpunkt.
 - `GET pages/{id}` → wie ein Listeneintrag plus `articles: [{id, title, alias, inColumn, published, start, stop, sorting, elements}]`

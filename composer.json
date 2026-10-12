@@ -1,0 +1,42 @@
+{
+    "name": "velundo/contao-connect",
+    "description": "Macht eine Contao-Installation für die velundo-App erreichbar: Seiten, Artikel, Inhaltselemente, SEO-Felder und Nachrichten lesen und gezielt ändern.",
+    "type": "contao-bundle",
+    "license": "LGPL-3.0-or-later",
+    "keywords": ["contao", "api", "velundo"],
+    "require": {
+        "php": ">=8.2",
+        "contao/core-bundle": "^5.3",
+        "doctrine/dbal": "^3.6 || ^4.0",
+        "psr/log": "^1.1 || ^2.0 || ^3.0",
+        "symfony/config": "^6.4 || ^7.0",
+        "symfony/console": "^6.4 || ^7.0",
+        "symfony/dependency-injection": "^6.4 || ^7.0",
+        "symfony/http-foundation": "^6.4 || ^7.0",
+        "symfony/http-kernel": "^6.4 || ^7.0",
+        "symfony/routing": "^6.4 || ^7.0"
+    },
+    "require-dev": {
+        "contao/manager-plugin": "^2.0"
+    },
+    "suggest": {
+        "contao/news-bundle": "Nachrichtenarchive und Nachrichten lesen und anlegen"
+    },
+    "conflict": {
+        "contao/manager-plugin": "<2.0 || >=3.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Velundo\\ContaoConnect\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Velundo\\ContaoConnect\\Tests\\": "Tests/"
+        }
+    },
+    "extra": {
+        "contao-manager-plugin": "Velundo\\ContaoConnect\\ContaoManager\\Plugin",
+        "velundo-version": "1.0.0"
+    }
+}

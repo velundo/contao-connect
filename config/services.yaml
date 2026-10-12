@@ -1,0 +1,88 @@
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+        public: false
+        bind:
+            Psr\Log\LoggerInterface: '@logger'
+
+    Velundo\ContaoConnect\:
+        resource: '../src/*'
+        exclude:
+            # Wertobjekte und Hilfen ohne Dienstcharakter, Bundle und Plugin
+            - '../src/Http/*'
+            - '../src/Api/Format.php'
+            - '../src/Service/Store/Array*.php'
+            - '../src/ContaoManager/*'
+            - '../src/VelundoContaoConnectBundle.php'
+
+    Velundo\ContaoConnect\Service\Settings:
+        arguments:
+            - '%velundo_contao_connect.settings%'
+            - '%kernel.environment%'
+
+    Velundo\ContaoConnect\Service\Features:
+        arguments:
+            $kernelBundles: '%kernel.bundles%'
+
+    Velundo\ContaoConnect\Service\Contao\ContaoSystemInfo:
+        arguments:
+            $kernelBundles: '%kernel.bundles%'
+
+    # Protokoll in tl_log: Kanal contao.general
+    Velundo\ContaoConnect\Service\LogService:
+        arguments:
+            $logger: '@monolog.logger.contao.general'
+
+    # Ablage für Tokens und Zähler: Tabellen tl_velundo_token und tl_velundo_rate
+    Velundo\ContaoConnect\Service\Store\TokenStoreInterface: '@Velundo\ContaoConnect\Service\Store\DbalTokenStore'
+    Velundo\ContaoConnect\Service\Store\RateStoreInterface: '@Velundo\ContaoConnect\Service\Store\DbalRateStore'
+
+    # Anbindung an Contao
+    Velundo\ContaoConnect\Service\Contao\VersionRecorderInterface: '@Velundo\ContaoConnect\Service\Contao\ContaoVersionRecorder'
+    Velundo\ContaoConnect\Service\Contao\UrlResolverInterface: '@Velundo\ContaoConnect\Service\Contao\ContaoUrlResolver'
+    Velundo\ContaoConnect\Service\Contao\SluggerInterface: '@Velundo\ContaoConnect\Service\Contao\ContaoSlugger'
+    Velundo\ContaoConnect\Service\Contao\HtmlWhitelistInterface: '@Velundo\ContaoConnect\Service\Contao\ContaoHtmlWhitelist'
+    Velundo\ContaoConnect\Service\Contao\SystemInfoInterface: '@Velundo\ContaoConnect\Service\Contao\ContaoSystemInfo'
+    Velundo\ContaoConnect\Service\Contao\CacheInvalidatorInterface: '@Velundo\ContaoConnect\Service\Contao\FosCacheInvalidator'
+
+    Velundo\ContaoConnect\Service\Contao\ContaoUrlResolver:
+        arguments:
+            $generator: '@contao.routing.content_url_generator'
+
+    Velundo\ContaoConnect\Service\Contao\ContaoSlugger:
+        arguments:
+            $slug: '@contao.slug'
+
+    Velundo\ContaoConnect\Service\Contao\ContaoVersionRecorder:
+        arguments:
+            $router: '@router'
+
+    # Ohne eingerichteten HTTP-Cache gibt es den Cache-Manager nicht (dann null)
+    Velundo\ContaoConnect\Service\Contao\FosCacheInvalidator:
+        arguments:
+            $cacheManager: '@?fos_http_cache.cache_manager'
+
+    Velundo\ContaoConnect\Api\ApiKernel:
+        arguments:
+            $handlers:
+                info: '@Velundo\ContaoConnect\Api\InfoHandler'
+                system: '@Velundo\ContaoConnect\Api\SystemHandler'
+                pages: '@Velundo\ContaoConnect\Api\PagesHandler'
+                articles: '@Velundo\ContaoConnect\Api\ArticlesHandler'
+                content: '@Velundo\ContaoConnect\Api\ContentHandler'
+                news_archives: '@Velundo\ContaoConnect\Api\NewsArchivesHandler'
+                news: '@Velundo\ContaoConnect\Api\NewsHandler'
+                seo: '@Velundo\ContaoConnect\Api\SeoHandler'
+                search: '@Velundo\ContaoConnect\Api\SearchHandler'
+                cache: '@Velundo\ContaoConnect\Api\CacheHandler'
+
+    # Controller werden über den Container geholt und müssen öffentlich sein
+    Velundo\ContaoConnect\Controller\ApiController:
+        public: true
+        tags: ['controller.service_arguments']
+
+    # Konsole: vendor/bin/contao-console velundo:token create|list|revoke
+    Velundo\ContaoConnect\Command\TokenCommand:
+        tags:
+            - { name: console.command, command: 'velundo:token', description: 'Zugangstoken für die velundo-App erzeugen, auflisten oder widerrufen' }

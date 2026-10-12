@@ -1,0 +1,11 @@
+# Schnittstelle /_velundo/… – bewusst ohne _scope: kein Contao-Frontend/-Backend, keine Firewall, keine Session.
+# _token_check: false – keine CSRF-Prüfung (Anmeldung nur per Token im Kopf).
+velundo_contao_connect_api:
+    path: /_velundo/{path}
+    controller: Velundo\ContaoConnect\Controller\ApiController
+    requirements:
+        path: '.*'
+    defaults:
+        path: ''
+        _token_check: false
+        _format: json
