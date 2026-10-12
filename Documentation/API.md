@@ -68,7 +68,8 @@ API nutzt. Beide Seiten halten sich wörtlich an diesen Vertrag. Marke klein „
   der Seitenname); Länge und Dubletten über den wirksamen Titel (`pageTitle`, sonst `title`).
 - `GET search?q=&root&visibility&limit` (`q` 2–200 Zeichen, `limit` Standard 20, ≤ 100) →
   `{"q":"…","pages":[{id,title,url,published}],"content":[{id,pid,ptable,type,headline,text_plain (≤ 300),invisible}],"news":[{id,headline,url,published}]}`
-  (Seiten: `title`, `pageTitle`; Inhaltselemente: `headline`, `text`; Nachrichten: `headline`, `teaser`).
+  (Seiten: `title`, `pageTitle`; Inhaltselemente: `headline`, `text`; Nachrichten: `headline`, `teaser`). Mit `root`
+  nur Seiten dieser Website und Inhaltselemente in deren Artikeln; Nachrichten gehören zu keiner Website und fehlen dann.
 
 ## Schreiben (direkt in der Datenbank, nie löschen)
 Jede Änderung setzt `tstamp`, legt einen Versionseintrag an (`tl_version` über `Contao\Versions`, Benutzername
