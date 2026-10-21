@@ -1,5 +1,15 @@
 # Änderungen
 
+## 1.0.2 – 2026-10-21
+
+Befund aus dem Code-Review vom 21.10.2026.
+
+- **Sperre für Insert-Tags am Endergebnis:** Die Prüfung lief vor der Bereinigung. Ein Kommentar oder ein nicht erlaubtes
+  Element zwischen den Klammern („{<!-- -->{insert_module::3}}“) verbarg das Tag, und erst das Entfernen setzte es zusammen –
+  Contao hätte es beim Rendern ausgeführt. Jetzt wird nach der Grobreinigung und nach der Positivliste erneut geprüft.
+- **Grobreinigung:** „/“ gilt als Trenner vor Attributen („<img/onerror=…>“), angefangene Tags ohne „>“ werden als Text
+  entwertet.
+
 ## 1.0.1 – 2026-10-12
 
 Befund aus dem Livetest mit Contao 6.0.3.

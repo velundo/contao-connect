@@ -27,8 +27,13 @@ final class HtmlSanitizer
     {
         self::assertInsertTags($html, $field);
         $html = $this->preClean($html);
+        // Erneut nach jeder Bereinigung: Das Entfernen eines Kommentars oder eines nicht erlaubten Tags kann erst das
+        // Insert-Tag zusammensetzen („{<!-- -->{insert_module::3}}“ → „{{insert_module::3}}“) – geprüft wird deshalb
+        // immer das, was gespeichert würde
+        self::assertInsertTags($html, $field);
         if ($this->whitelist !== null) {
             $html = $this->whitelist->clean($html);
+            self::assertInsertTags($html, $field);
         }
         return $html;
     }
@@ -62,17 +67,23 @@ final class HtmlSanitizer
             $html = (string)preg_replace('#<' . $element . '\b[^>]*/?>#i', '', $html);
             $html = (string)preg_replace('#</' . $element . '\s*>#i', '', $html);
         }
+        // Ein angefangenes Tag ohne schließendes „>“ („<img src=x onerror=…“ am Textende) wäre für die Attributbereinigung
+        // unsichtbar – als Text entwerten
+        $html = (string)preg_replace('#<(?=[a-z/!?])(?![^<>]*>)#i', '&lt;', $html);
         // Attribute nur innerhalb von Tags bereinigen – Fließtext wie „online=Version“ bleibt unangetastet
         return (string)preg_replace_callback('#<[a-z][^>]*>#i', static fn(array $m): string => self::cleanTag($m[0]), $html);
     }
 
-    /** Entfernt aus einem einzelnen Start-Tag Ereignis-Attribute, style mit Ausdrücken und Skript-Adressen. */
+    /**
+     * Entfernt aus einem einzelnen Start-Tag Ereignis-Attribute, style mit Ausdrücken und Skript-Adressen. Als Trenner
+     * vor einem Attribut gilt auch „/“ („<img/onerror=…>“ liest der Browser wie „<img onerror=…>“).
+     */
     private static function cleanTag(string $tag): string
     {
-        $tag = (string)preg_replace('#\s+on[a-z]+\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)#i', '', $tag);
-        $tag = (string)preg_replace('#\s+style\s*=\s*("[^"]*(expression|javascript|url\s*\()[^"]*"|\'[^\']*(expression|javascript|url\s*\()[^\']*\')#i', '', $tag);
+        $tag = (string)preg_replace('#[\s/]+on[a-z]+\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)#i', '', $tag);
+        $tag = (string)preg_replace('#[\s/]+style\s*=\s*("[^"]*(expression|javascript|url\s*\()[^"]*"|\'[^\']*(expression|javascript|url\s*\()[^\']*\')#i', '', $tag);
         return (string)preg_replace_callback(
-            '#\s(href|src|action|formaction|xlink:href|data|poster|background)\s*=\s*("([^"]*)"|\'([^\']*)\'|([^\s>]+))#i',
+            '#[\s/](href|src|action|formaction|xlink:href|data|poster|background)\s*=\s*("([^"]*)"|\'([^\']*)\'|([^\s>]+))#i',
             static function (array $m): string {
                 $value = $m[3] !== '' ? $m[3] : ($m[4] !== '' ? $m[4] : ($m[5] ?? ''));
                 $probe = strtolower((string)preg_replace('/[\s\x00-\x1f]+/', '', html_entity_decode($value, ENT_QUOTES | ENT_HTML5)));

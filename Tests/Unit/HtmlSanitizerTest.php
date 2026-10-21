@@ -64,6 +64,47 @@ final class HtmlSanitizerTest extends TestCase
         }
     }
 
+    /** Ein Insert-Tag, das erst die Bereinigung zusammensetzt (Kommentar oder verbotenes Element zwischen den Klammern), wird am Endergebnis erkannt. */
+    public function testInsertTagsAssembledByCleaningAreRejected(): void
+    {
+        $whitelist = new class implements HtmlWhitelistInterface {
+            public function clean(string $html): string
+            {
+                return strip_tags($html, '<p><a>');
+            }
+        };
+        foreach ([new HtmlSanitizer(), new HtmlSanitizer($whitelist)] as $sanitizer) {
+            foreach (['<p>{<!-- -->{insert_module::3}}</p>', '<p>{<script>x</script>{env::host}}</p>', '<p>{<!-- a -->{insert_article::5}}</p>'] as $bad) {
+                try {
+                    $sanitizer->sanitize($bad);
+                    self::fail("$bad hätte abgelehnt werden müssen");
+                } catch (ApiException $e) {
+                    self::assertSame('insert_tag_not_allowed', $e->errorCode, $bad);
+                }
+            }
+        }
+        // Erst die Positivliste von Contao setzt das Tag zusammen („<x>“ bleibt in der Grobreinigung stehen)
+        try {
+            (new HtmlSanitizer($whitelist))->sanitize('<p>{<x>{insert_module::3}}</p>');
+            self::fail('Insert-Tag nach der Positivliste hätte abgelehnt werden müssen');
+        } catch (ApiException $e) {
+            self::assertSame('insert_tag_not_allowed', $e->errorCode);
+        }
+        self::assertSame('<p>{{link_url::12}}</p>', (new HtmlSanitizer($whitelist))->sanitize('<p>{{link_url::12}}</p>'));
+    }
+
+    /** „/“ als Attribut-Trenner und angefangene Tags ohne „>“ entgehen der Bereinigung nicht. */
+    public function testSlashSeparatedAttributesAndUnterminatedTags(): void
+    {
+        self::assertSame('<img src="x">', $this->sanitizer->preClean('<img/onerror=alert(1) src="x">'));
+        // Ein unquotierter Wert reicht bis zum nächsten Leerzeichen – „alert(1)/src="x"“ ist der Wert von onerror
+        self::assertSame('<img>', $this->sanitizer->preClean('<img/onerror=alert(1)/src="x">'));
+        self::assertSame('<a>x</a>', $this->sanitizer->preClean('<a/href=javascript:alert(1)>x</a>'));
+        self::assertSame('<p>&lt;img src=x onerror=alert(1)</p>', $this->sanitizer->preClean('<p><img src=x onerror=alert(1)</p>'));
+        self::assertSame('Text &lt;img src=x onerror=alert(1)', $this->sanitizer->preClean('Text <img src=x onerror=alert(1)'));
+        self::assertSame('<p>a < b</p>', $this->sanitizer->preClean('<p>a < b</p>'));
+    }
+
     public function testWhitelistRunsAfterPreClean(): void
     {
         $whitelist = new class implements HtmlWhitelistInterface {

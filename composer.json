@@ -37,6 +37,6 @@
     },
     "extra": {
         "contao-manager-plugin": "Velundo\\ContaoConnect\\ContaoManager\\Plugin",
-        "velundo-version": "1.0.1"
+        "velundo-version": "1.0.2"
     }
 }
