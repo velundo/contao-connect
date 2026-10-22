@@ -13,9 +13,17 @@ API nutzt. Beide Seiten halten sich wörtlich an diesen Vertrag. Marke klein „
   `vendor/bin/contao-console velundo:token create "<Bezeichnung>"` erzeugt, nur als SHA-256-Hash in der Tabelle
   `tl_velundo_token` gespeichert, einmal angezeigt; mehrere Tokens mit Bezeichnung möglich, widerrufbar
   (`velundo:token revoke <Kennung>`). Fehlendes/falsches Token → 401 `{"error":{"code":"unauthorized","message":"…"}}`.
+- Zusatzrechte je Token (ab 1.1.0, Spalte `scopes`): Ohne Zusatzrecht ändert ein Token nur unveröffentlichte Inhalte und
+  Metadaten. `velundo:token create "…" --allow-publish` erlaubt `published: true` bei Seiten und Nachrichten und
+  `invisible: false` bei Inhaltselementen; `--allow-live-edit` erlaubt `title`/`pageTitle` veröffentlichter Seiten,
+  `headline`/`headline_unit`/`text` sichtbarer Inhaltselemente und `headline`/`teaser`/`text` veröffentlichter
+  Nachrichten (`description`, `robots`, `hide`, `date` bleiben frei; wird im selben Aufruf unveröffentlicht, gilt die
+  Änderung als Entwurf). Fehlt das Recht → 403 `scope_publish` bzw. `scope_live_edit` (Meldung nennt das Kommando).
+  Tokens aus 1.0.x und Installationen ohne `contao:migrate` haben keine Zusatzrechte.
 - Reihenfolge der Prüfungen: Token → HTTPS → Ratenbegrenzung → Route. Ohne gültiges Token antwortet jeder Pfad unter
   `/_velundo/` mit 401 – auch über `http`, ohne Versionsangaben. Mit gültigem Token über `http` (und `require_https`
-  aktiv, Umgebung nicht `dev`) → 403 `https_required`.
+  aktiv, Umgebung nicht `dev`) → 403 `https_required`. Mehr als 30 Anfragen ohne gültiges Token je Minute und
+  Absenderadresse → 429 (ab 1.1.0, vor der Token-Prüfung; Adresse nur gehasht in `tl_velundo_rate`).
 - Header der Antwort: `X-Velundo-Api: 1`, `Content-Type: application/json; charset=utf-8`, `Cache-Control: no-store`.
 - Fehler: HTTP 400/401/403/404/409/422/429/500 mit `{"error":{"code":"<snake_case>","message":"<deutsch>","details":{}}}`.
   Unbekannte Methode für einen bekannten Pfad → 404 `method_not_allowed` mit `details.allowed`.
@@ -41,7 +49,8 @@ API nutzt. Beide Seiten halten sich wörtlich an diesen Vertrag. Marke klein „
 - `GET info` → `{"contao":"5.3.12","php":"8.3.x","bundle":"1.0.0","roots":[{"id":1,"title":"…","dns":"www.example.de","language":"de","fallback":true,"published":true,"maintenance":false,"base":"https://www.example.de/"}],"features":{"news":bool,"calendar":bool,"http_cache":bool},"limits":{"max_text_kb":200,"rate_limit_per_minute":120,"limit_max":200}}`
   (`base`: Schema aus `useSSL`, Host aus `dns` oder – leer – dem Host der Anfrage, dazu `urlPrefix`)
 - `GET system` → `{"contao":…,"php":…,"environment":"prod","bundles":["ContaoCoreBundle",…],"packages":[{"name":"contao/news-bundle","type":"contao-bundle","version":"5.3.12"}],"cron_last_run":"…"|null}`
-  (Bundles des Kernels; Pakete der Typen `contao-bundle`, `contao-module`, `contao-theme`, `symfony-bundle` laut Composer;
+  (ab 1.1.0 nur Bundles mit Kurznamen `Contao…`/`Velundo…` und Pakete `contao/*`, `velundo/*` – keine Inventarliste;
+  Pakete der Typen `contao-bundle`, `contao-module`, `contao-theme`, `symfony-bundle` laut Composer;
   keine Pfade, keine Geheimnisse, keine Konfigurationswerte)
 - `GET pages?root&parent=<id>&depth=1..20&search=&visibility&limit&offset` → Seiten in Baumreihenfolge (Tiefensuche nach
   `sorting`); items: `id, pid, root, level, type, title, alias, url, published, hide, robots, pageTitle, description, start, stop, tstamp, language, sorting`.
@@ -85,6 +94,7 @@ der HTTP-Cache von Contao eingerichtet ist). Jede Schreibantwort enthält
   Längen: `title` 1–255, `pageTitle` ≤ 255, `description` ≤ 5000 Zeichen → sonst 422 `too_long` bzw. `empty_value`.
   `robots`: `""` (Standard), `index,follow`, `index,nofollow`, `noindex,follow`, `noindex,nofollow` → sonst 422 `invalid_value`.
   Startpunkte (`type = root`): nur `title` und `pageTitle` → sonst 422 `root_page`.
+  `published: true` braucht `publish`, `title`/`pageTitle` einer veröffentlichten Seite `live_edit` (403 `scope_…`, siehe oben).
 - `POST content` Body: `article (id) | news (id)` (genau eines), `type ("text"|"headline", Standard "text")`, `headline`,
   `headline_unit (h1–h6, Standard h2)`, `text (HTML, nur bei type text)`, `after (id, optional)` → 201 `{"id":n,"sorting":s,"before":{}}`.
   Neue Elemente sind **immer unsichtbar** (`invisible = true`); ein Feld `invisible` im Rumpf → 422 `unknown_field`.
@@ -94,7 +104,8 @@ der HTTP-Cache von Contao eingerichtet ist). Jede Schreibantwort enthält
   128er-Schritten neu nummeriert.
 - `PATCH content/{id}` Body: Teilmenge von `headline, headline_unit, text, invisible` → 200 mit Element wie `GET content/{id}`.
   `headline`/`headline_unit` nur bei Typ `text` und `headline`, `text` nur bei Typ `text` → sonst 422 `unsupported_type`;
-  `invisible` bei jedem Typ.
+  `invisible` bei jedem Typ. `invisible: false` braucht `publish`, `headline`/`headline_unit`/`text` eines sichtbaren
+  Elements `live_edit`.
 - `POST news` (features.news) Body: `archive (id, Pflicht), headline (Pflicht, ≤ 255), teaser (HTML), text (HTML → ein
   Inhaltselement vom Typ text mit ptable tl_news), date (ISO, Standard jetzt), pageTitle, description` → 201
   `{"id":n,"alias":"…","text_element":m|null,"before":{}}`. Nachrichten entstehen **immer unveröffentlicht**
@@ -104,6 +115,7 @@ der HTTP-Cache von Contao eingerichtet ist). Jede Schreibantwort enthält
 - `PATCH news/{id}` Body: Teilmenge von `headline, teaser, text, date, published, pageTitle, description` → 200 wie `GET news/{id}`.
   `text` ändert das einzige Element vom Typ `text` der Nachricht bzw. legt eines an (sichtbar innerhalb der Nachricht);
   bei mehreren → 422 `ambiguous_text` mit `details.elements` (dann einzeln über `PATCH content/{id}`).
+  `published: true` braucht `publish`, `headline`/`teaser`/`text` einer veröffentlichten Nachricht `live_edit`.
 - `POST cache/clear` Body: `{"pages":[id,…]}` und/oder `{"news":[id,…]}` (zusammen 1–200 IDs) → 200
   `{"tags":["contao.db.tl_page.1",…],"invalidated":true,"before":{}}`. Ohne HTTP-Cache (`features.http_cache = false`)
   → 404 `feature_unavailable`. Leeren des gesamten Caches ist nicht vorgesehen.

@@ -133,9 +133,17 @@ final class PagesHandler implements HandlerInterface
             throw ApiException::validation('Feld „robots“ muss leer oder index,follow, index,nofollow, noindex,follow bzw. noindex,nofollow sein.', ['field' => 'robots', 'allowed' => self::ROBOTS], 'invalid_value');
         }
         $changes->set('robots', $robots, $current['robots']);
-        $changes->flag('published', Validate::bool($body, 'published'), $current['published']);
+        $published = Validate::bool($body, 'published');
+        $changes->flag('published', $published, $current['published']);
         $changes->flag('hide', Validate::bool($body, 'hide'), $current['hide']);
         $changes->requireAny(self::WRITABLE);
+        // Zusatzrechte des Tokens: Veröffentlichen und Live-Änderungen an sichtbaren Seiten (SEO-Felder bleiben frei)
+        if ($published === true && !$current['published']) {
+            $request->require('publish', 'Das Veröffentlichen einer Seite');
+        }
+        if (($title !== null || $pageTitle !== null) && $current['published'] && $published !== false) {
+            $request->require('live_edit', 'Das Ändern von title oder pageTitle einer veröffentlichten Seite');
+        }
 
         $pid = (int)$row['pid'];
         $this->writer->update('tl_page', $id, $changes->data(), 'page', Writer::tags('tl_page', $id, $pid > 0 ? 'tl_page' : '', $pid),

@@ -28,9 +28,24 @@ eingetragen. In Contao bleibt nur der SHA-256-Hash gespeichert.
 Weitere Kommandos:
 
 ```bash
-vendor/bin/contao-console velundo:token list          # Kennung, Bezeichnung, Erzeugt, Zuletzt verwendet, Status
+vendor/bin/contao-console velundo:token list          # Kennung, Bezeichnung, Erzeugt, Zuletzt verwendet, Rechte, Status
 vendor/bin/contao-console velundo:token revoke <Kennung>   # Token widerrufen (sofort wirksam)
 ```
+
+### Rechte eines Tokens
+
+Ein Token ohne Zusatzrecht ändert nur unveröffentlichte Inhalte und Metadaten (SEO-Felder, Datum, Verbergen in der
+Navigation). Zusatzrechte werden beim Erzeugen vergeben (ab 1.1.0):
+
+```bash
+vendor/bin/contao-console velundo:token create "Agentur Test" --allow-publish      # veröffentlichen / sichtbar schalten
+vendor/bin/contao-console velundo:token create "Agentur Test" --allow-live-edit    # Titel und Texte sichtbarer Datensätze ändern
+```
+
+Beide Optionen lassen sich kombinieren. Fehlt das Recht, antwortet die Schnittstelle mit 403 `scope_publish` bzw.
+`scope_live_edit`; die velundo-App zeigt dann an, welches Token nötig wäre. Tokens aus 1.0.x haben keine Zusatzrechte.
+Nach dem Update auf 1.1.0 einmal `contao:migrate` ausführen (neue Spalte `scopes`); bis dahin gelten alle Tokens ohne
+Zusatzrechte, und ein Token mit Rechten lässt sich noch nicht anlegen.
 
 Prüfen, ob die Schnittstelle antwortet:
 
@@ -39,7 +54,8 @@ curl -s -H "Authorization: Bearer <token>" https://<host>/_velundo/v1/info
 ```
 
 Ohne Token antwortet jeder Pfad unter `/_velundo/` mit `401` – ohne Versionsangaben, auch über `http` (die Token-Prüfung
-kommt vor der HTTPS-Prüfung; erst mit gültigem Token folgt über `http` die 403 `https_required`).
+kommt vor der HTTPS-Prüfung; erst mit gültigem Token folgt über `http` die 403 `https_required`). Mehr als 30 Anfragen
+ohne gültiges Token je Minute und Absenderadresse → `429`.
 
 ### Warum eine eigene Tabelle für die Tokens
 
@@ -90,6 +106,8 @@ pageTitle), `POST content` (Typ text oder headline in einen Artikel oder eine Na
 `PATCH content/{id}` (headline, headline_unit, text, invisible), `POST news` (**immer unveröffentlicht**, Text als
 Inhaltselement), `PATCH news/{id}` (headline, teaser, text, date, published, pageTitle, description), `POST cache/clear`
 (Cache-Tags einzelner Seiten und Nachrichten). Jede Schreibantwort enthält `before` mit den vorherigen Werten.
+Veröffentlichen bzw. Sichtbarschalten braucht ein Token mit `--allow-publish`, das Ändern von Titeln, Überschriften und
+Texten bereits sichtbarer Datensätze eines mit `--allow-live-edit` (siehe „Rechte eines Tokens“).
 
 - Jede Änderung setzt `tstamp`, legt eine Version an (`tl_version`, Benutzer „velundo“ – im Backend unter „Versionen“
   vergleichen und wiederherstellen), schreibt ins Contao-Protokoll und invalidiert die Cache-Tags
@@ -116,10 +134,11 @@ Inhaltselement), `PATCH news/{id}` (headline, teaser, text, date, published, pag
   ID und geänderten Feldnamen – keine Inhalte), ebenso abgelehnte Schreibversuche mit gültigem Token
   (`velundo: <Methode> <Pfad> → <Status> – Token „<Bezeichnung>“`). Lesezugriffe, Anfragen ohne gültiges Token und
   429-Antworten werden nicht protokolliert – regelmäßige Abfragen fluten das Protokoll so nicht.
-- Die Schnittstelle gibt keine Pfade, Zugangsdaten oder Konfigurationswerte aus; `GET system` nennt Versionen, Bundles
-  und Pakete.
-- Rechte: Wer ein Token hat, kann alle oben genannten Felder aller Websites der Installation lesen und ändern. Tokens
-  deshalb je Agentur/Verbindung einzeln erzeugen und bei Bedarf widerrufen.
+- Die Schnittstelle gibt keine Pfade, Zugangsdaten oder Konfigurationswerte aus; `GET system` nennt Versionen sowie
+  nur die Bundles und Pakete von Contao und velundo (keine Inventarliste aller Erweiterungen).
+- Rechte: Wer ein Token hat, kann alle oben genannten Felder aller Websites der Installation lesen und – im Rahmen der
+  Zusatzrechte des Tokens – ändern. Tokens deshalb je Agentur/Verbindung einzeln erzeugen, nur die nötigen Rechte
+  vergeben und bei Bedarf widerrufen.
 
 ## Contao 5.3 und 6
 

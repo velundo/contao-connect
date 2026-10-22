@@ -33,7 +33,9 @@ final class ApiController
             $request->headers->get('Authorization'),
             $request->headers->get('X-Velundo-Token'),
             $request->isSecure(),
-            $request->getHost()
+            $request->getHost(),
+            // Absenderadresse nur für die Bremse gegen Fehlversuche (nicht gespeichert, nur gehasht gezählt)
+            (string)$request->getClientIp()
         );
         $response = new JsonResponse(null, $result['status']);
         $response->setEncodingOptions(self::JSON_FLAGS);

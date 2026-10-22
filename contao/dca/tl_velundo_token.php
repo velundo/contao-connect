@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /*
- * Zugangstokens der velundo-Schnittstelle: nur der SHA-256-Hash, Bezeichnung und Zeitpunkte. Die Tabelle legt
+ * Zugangstokens der velundo-Schnittstelle: nur der SHA-256-Hash, Bezeichnung, Zeitpunkte und Zusatzrechte. Die Tabelle legt
  * „contao:migrate“ an; eine Bearbeitung im Backend ist nicht vorgesehen (Pflege nur über velundo:token).
  * Spalten in der Array-Schreibweise von Doctrine (Contao 5.3 und 6).
  */
@@ -32,5 +32,7 @@ $GLOBALS['TL_DCA']['tl_velundo_token'] = [
         'created' => ['sql' => ['type' => 'integer', 'unsigned' => true, 'default' => 0]],
         'last_used' => ['sql' => ['type' => 'integer', 'unsigned' => true, 'default' => 0]],
         'revoked' => ['sql' => ['type' => 'integer', 'unsigned' => true, 'default' => 0]],
+        // ab 1.1.0: kommagetrennte Zusatzrechte (publish, live_edit); leer = nur Entwürfe und Metadaten
+        'scopes' => ['sql' => ['type' => 'string', 'length' => 64, 'default' => '']],
     ],
 ];

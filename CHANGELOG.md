@@ -1,5 +1,22 @@
 # Änderungen
 
+## 1.1.0 – 2026-10-22
+
+Befunde aus dem Code-Review vom 21.10.2026: Die Admin-Pflicht für Veröffentlichen und Live-Änderungen galt bisher nur in
+der velundo-App – mit jedem Token war serverseitig alles möglich.
+
+- **Zusatzrechte je Token:** Ein Token ändert ohne Zusatzrecht nur unveröffentlichte Inhalte und Metadaten.
+  `velundo:token create "…" --allow-publish` erlaubt das Veröffentlichen bzw. Sichtbarschalten (Seiten, Inhaltselemente,
+  Nachrichten), `--allow-live-edit` das Ändern von Titeln, Überschriften und Texten bereits sichtbarer Datensätze
+  (SEO-Felder, Datum und Verbergen bleiben frei). Fehlt das Recht: 403 `scope_publish` bzw. `scope_live_edit` mit
+  Hinweis auf das Kommando. `velundo:token list` zeigt die Rechte. Neue Spalte `scopes` in `tl_velundo_token` – nach dem
+  Update `contao:migrate` bzw. „Datenbank aktualisieren“ ausführen; bis dahin gelten alle Tokens ohne Zusatzrechte.
+  Bestehende Tokens aus 1.0.x haben keine Zusatzrechte – für Veröffentlichungen ein neues Token mit den gewünschten
+  Rechten erzeugen.
+- **`GET system` knapper:** nur noch Bundles und Pakete von Contao und velundo – keine Inventarliste aller Erweiterungen.
+- **Bremse vor der Token-Prüfung:** Mehr als 30 Anfragen ohne gültiges Token je Minute und Absenderadresse → 429
+  (Zähler in `tl_velundo_rate`, Adresse nur gehasht).
+
 ## 1.0.2 – 2026-10-21
 
 Befund aus dem Code-Review vom 21.10.2026.

@@ -154,7 +154,8 @@ final class NewsHandler implements HandlerInterface
             $changes->set('date', $date, $current['date']);
             $changes->set('date', $date, $current['date'], $date, 'time');
         }
-        $changes->flag('published', Validate::bool($body, 'published'), $current['published']);
+        $published = Validate::bool($body, 'published');
+        $changes->flag('published', $published, $current['published']);
         $pageTitle = PlainText::fromBody($body, 'pageTitle', self::HEADLINE_MAX);
         $changes->set('pageTitle', $pageTitle, $current['pageTitle'], $pageTitle === null ? null : PlainText::encode($pageTitle, PlainText::ENCODE_LT));
         $description = PlainText::fromBody($body, 'description', self::DESCRIPTION_MAX, false, true);
@@ -177,6 +178,13 @@ final class NewsHandler implements HandlerInterface
             $changes->external('text', $texts ? PlainText::html((string)($texts[0]['text'] ?? '')) : '');
         }
         $changes->requireAny(self::WRITABLE);
+        // Zusatzrechte des Tokens: Veröffentlichen und Live-Änderungen an veröffentlichten Nachrichten
+        if ($published === true && !$current['published']) {
+            $request->require('publish', 'Das Veröffentlichen einer Nachricht');
+        }
+        if (($headline !== null || $teaser !== null || $text !== null) && $current['published'] && $published !== false) {
+            $request->require('live_edit', 'Das Ändern von headline, teaser oder text einer veröffentlichten Nachricht');
+        }
 
         $archiveId = (int)$row['pid'];
         $this->writer->update('tl_news', $id, $changes->data(), 'news', Writer::tags('tl_news', $id, 'tl_news_archive', $archiveId),

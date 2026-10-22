@@ -11,11 +11,15 @@ use Velundo\ContaoConnect\Service\Db;
 use Velundo\ContaoConnect\Service\Settings;
 
 /**
- * GET system – Versionen, Bundles des Kernels, Contao-/Symfony-Pakete und der letzte Cron-Lauf (keine Pfade, keine
- * Geheimnisse, keine Konfigurationswerte).
+ * GET system – Versionen, die für die App relevanten Bundles und Pakete (Contao und velundo) und der letzte Cron-Lauf
+ * (keine Pfade, keine Geheimnisse, keine Konfigurationswerte, keine Inventarliste aller Erweiterungen).
  */
 final class SystemHandler implements HandlerInterface
 {
+    /** Präfixe der Bundles (Kurznamen) und Pakete, die GET system nennt (ab 1.1.0). */
+    private const BUNDLE_PREFIXES = ['Contao', 'Velundo'];
+    private const PACKAGE_PREFIXES = ['contao/', 'velundo/'];
+
     public function __construct(
         private readonly Db $db,
         private readonly SystemInfoInterface $system,
@@ -34,9 +38,20 @@ final class SystemHandler implements HandlerInterface
             'contao' => $this->system->contaoVersion(),
             'php' => PHP_VERSION,
             'environment' => $this->settings->environment(),
-            'bundles' => $this->system->bundles(),
-            'packages' => $this->system->packages(),
+            'bundles' => array_values(array_filter($this->system->bundles(), static fn(string $name): bool => self::startsWithAny($name, self::BUNDLE_PREFIXES))),
+            'packages' => array_values(array_filter($this->system->packages(), static fn(array $p): bool => self::startsWithAny((string)$p['name'], self::PACKAGE_PREFIXES))),
             'cron_last_run' => $lastCron,
         ]);
+    }
+
+    /** @param list<string> $prefixes */
+    public static function startsWithAny(string $value, array $prefixes): bool
+    {
+        foreach ($prefixes as $prefix) {
+            if (str_starts_with($value, $prefix)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

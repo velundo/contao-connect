@@ -15,6 +15,12 @@ final class TokenService
 {
     private const LAST_USED_INTERVAL = 60;
 
+    /**
+     * Zusatzrechte (ab 1.1.0): publish = Sichtbarschalten (published/invisible), live_edit = Titel und Texte sichtbarer
+     * Datensätze ändern. Ohne Zusatzrecht ändert ein Token nur unveröffentlichte Inhalte und Metadaten.
+     */
+    public const SCOPES = ['publish', 'live_edit'];
+
     /** @var callable(): int */
     private $clock;
 
@@ -28,23 +34,59 @@ final class TokenService
     /**
      * Erzeugt ein Token; der Klartext wird nur hier zurückgegeben.
      *
-     * @return array{id: int, name: string, token: string}
+     * @param list<string> $scopes Zusatzrechte aus self::SCOPES
+     * @return array{id: int, name: string, token: string, scopes: list<string>}
      */
-    public function create(string $name): array
+    public function create(string $name, array $scopes = []): array
     {
         $name = trim((string)preg_replace('/[\x00-\x1f\x7f]+/', ' ', $name));
         if ($name === '' || mb_strlen($name) > 100) {
             throw new \InvalidArgumentException('Die Bezeichnung muss 1 bis 100 Zeichen lang sein.');
         }
+        $scopes = self::normalizeScopes($scopes);
         $token = self::encode(random_bytes(32));
-        $id = $this->store->insert($name, self::hash($token), ($this->clock)());
-        return ['id' => $id, 'name' => $name, 'token' => $token];
+        $id = $this->store->insert($name, self::hash($token), ($this->clock)(), implode(',', $scopes));
+        return ['id' => $id, 'name' => $name, 'token' => $token, 'scopes' => $scopes];
+    }
+
+    /**
+     * Bekannte Zusatzrechte in fester Reihenfolge, ohne Doppelte; unbekannte → InvalidArgumentException.
+     *
+     * @param list<string> $scopes
+     * @return list<string>
+     */
+    public static function normalizeScopes(array $scopes): array
+    {
+        $wanted = [];
+        foreach ($scopes as $scope) {
+            $scope = strtolower(trim((string)$scope));
+            if ($scope === '') {
+                continue;
+            }
+            if (!in_array($scope, self::SCOPES, true)) {
+                throw new \InvalidArgumentException(sprintf('Unbekanntes Zusatzrecht „%s“ – erlaubt sind %s.', $scope, implode(', ', self::SCOPES)));
+            }
+            $wanted[$scope] = true;
+        }
+        return array_values(array_filter(self::SCOPES, static fn(string $s): bool => isset($wanted[$s])));
+    }
+
+    /**
+     * Zusatzrechte eines gespeicherten Eintrags (kommagetrennt); Unbekanntes wird übergangen.
+     *
+     * @param array{scopes?: string} $row
+     * @return list<string>
+     */
+    private static function scopesOf(array $row): array
+    {
+        $stored = array_map('trim', explode(',', (string)($row['scopes'] ?? '')));
+        return array_values(array_filter(self::SCOPES, static fn(string $s): bool => in_array($s, $stored, true)));
     }
 
     /**
      * Alle Tokens ohne Hash (auch widerrufene).
      *
-     * @return list<array{id: int, name: string, created: int, last_used: ?int, revoked: ?int}>
+     * @return list<array{id: int, name: string, created: int, last_used: ?int, revoked: ?int, scopes: list<string>}>
      */
     public function list(): array
     {
@@ -56,6 +98,7 @@ final class TokenService
                 'created' => $row['created'],
                 'last_used' => $row['last_used'] > 0 ? $row['last_used'] : null,
                 'revoked' => $row['revoked'] > 0 ? $row['revoked'] : null,
+                'scopes' => self::scopesOf($row),
             ];
         }
         return $result;
@@ -67,9 +110,9 @@ final class TokenService
     }
 
     /**
-     * Prüft ein Token aus dem Authorization-Kopf („Bearer …“); liefert id und Bezeichnung oder null.
+     * Prüft ein Token aus dem Authorization-Kopf („Bearer …“); liefert id, Bezeichnung und Zusatzrechte oder null.
      *
-     * @return array{id: int, name: string}|null
+     * @return array{id: int, name: string, scopes: list<string>}|null
      */
     public function authenticate(?string $authorizationHeader): ?array
     {
@@ -93,7 +136,7 @@ final class TokenService
         if ($now - $match['last_used'] >= self::LAST_USED_INTERVAL) {
             $this->store->markUsed($match['id'], $now);
         }
-        return ['id' => $match['id'], 'name' => $match['name']];
+        return ['id' => $match['id'], 'name' => $match['name'], 'scopes' => self::scopesOf($match)];
     }
 
     public static function extractBearer(?string $header): ?string

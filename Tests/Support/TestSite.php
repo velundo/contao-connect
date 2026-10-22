@@ -174,7 +174,8 @@ final class TestSite
         $clock = fn(): int => $this->now;
         $settingsObj = new Settings($settings + ['rate_limit_per_minute' => 1000]);
         $this->tokens = new TokenService(new DbalTokenStore($this->connection), $clock);
-        $this->token = $this->tokens->create('Agentur Test')['token'];
+        // Das Standard-Token der Prüfungen hat alle Zusatzrechte; Tests/Unit/ScopeTest.php prüft Tokens ohne Rechte
+        $this->token = $this->tokens->create('Agentur Test', TokenService::SCOPES)['token'];
         $log = new LogService($this->logger);
         $writer = new Writer($db, $this->versions, $this->cache, $log, $this->logger, $clock);
         $features = new Features($news ? ['ContaoCoreBundle' => 'x', 'ContaoNewsBundle' => 'y'] : ['ContaoCoreBundle' => 'x'], $this->cache);
@@ -203,9 +204,9 @@ final class TestSite
      * @param array<string, mixed> $query
      * @return array{status: int, data: array<string, mixed>, headers: array<string, string>}
      */
-    public function call(string $method, string $path, ?array $body = null, array $query = [], ?string $token = null, bool $secure = true, ?string $velundoToken = null): array
+    public function call(string $method, string $path, ?array $body = null, array $query = [], ?string $token = null, bool $secure = true, ?string $velundoToken = null, string $remoteAddress = '203.0.113.10'): array
     {
-        $r = $this->kernel->handle($method, $path, $query, $body === null ? '' : (string)json_encode($body), 'Bearer ' . ($token ?? $this->token), $velundoToken, $secure, 'www.example.de');
+        $r = $this->kernel->handle($method, $path, $query, $body === null ? '' : (string)json_encode($body), 'Bearer ' . ($token ?? $this->token), $velundoToken, $secure, 'www.example.de', $remoteAddress);
         // Rundreise durch JSON wie im Controller (stdClass → {}, Typen wie beim Client)
         $r['data'] = json_decode((string)json_encode($r['data'], JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION), true);
         return $r;
@@ -237,7 +238,7 @@ final class TestSite
         $pdo->exec('CREATE TABLE tl_cron_job (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, lastRun INTEGER NOT NULL DEFAULT 0)');
         // wie die DCA-Dateien contao/dca/tl_velundo_token.php und tl_velundo_rate.php
         $pdo->exec("CREATE TABLE tl_velundo_token (id INTEGER PRIMARY KEY AUTOINCREMENT, tstamp INTEGER NOT NULL DEFAULT 0, name TEXT NOT NULL DEFAULT '', token_hash TEXT NOT NULL DEFAULT '' UNIQUE,
-            created INTEGER NOT NULL DEFAULT 0, last_used INTEGER NOT NULL DEFAULT 0, revoked INTEGER NOT NULL DEFAULT 0)");
+            created INTEGER NOT NULL DEFAULT 0, last_used INTEGER NOT NULL DEFAULT 0, revoked INTEGER NOT NULL DEFAULT 0, scopes TEXT NOT NULL DEFAULT '')");
         $pdo->exec('CREATE TABLE tl_velundo_rate (id INTEGER PRIMARY KEY AUTOINCREMENT, token_id INTEGER NOT NULL DEFAULT 0, window_start INTEGER NOT NULL DEFAULT 0, hits INTEGER NOT NULL DEFAULT 0, UNIQUE (token_id, window_start))');
     }
 

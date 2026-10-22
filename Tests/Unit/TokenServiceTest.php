@@ -36,7 +36,7 @@ final class TokenServiceTest extends TestCase
     public function testAuthenticateAcceptsValidBearerAndRejectsOthers(): void
     {
         $created = $this->service->create('Agentur Test');
-        self::assertSame(['id' => 1, 'name' => 'Agentur Test'], $this->service->authenticate('Bearer ' . $created['token']));
+        self::assertSame(['id' => 1, 'name' => 'Agentur Test', 'scopes' => []], $this->service->authenticate('Bearer ' . $created['token']));
         self::assertNull($this->service->authenticate(null));
         self::assertNull($this->service->authenticate(''));
         self::assertNull($this->service->authenticate('Bearer ' . TokenService::encode(random_bytes(32))));
@@ -121,7 +121,7 @@ final class TokenServiceTest extends TestCase
         $this->now += 120;
         // Eine Anfrage vermerkt „zuletzt verwendet“ – der Widerruf bleibt, das Token wird abgelehnt
         self::assertNull($cli->authenticate('Bearer ' . $a['token']));
-        self::assertSame(['id' => $b['id'], 'name' => 'Zweites Token'], $cli->authenticate('Bearer ' . $b['token']));
+        self::assertSame(['id' => $b['id'], 'name' => 'Zweites Token', 'scopes' => []], $cli->authenticate('Bearer ' . $b['token']));
         $rows = $cli->list();
         self::assertSame($this->now - 120, $rows[0]['revoked']);
         self::assertSame($this->now, $rows[1]['last_used']);

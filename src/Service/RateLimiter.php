@@ -15,6 +15,12 @@ final class RateLimiter
     private const WINDOW = 60;
     private const KEEP_WINDOWS = 5;
 
+    /** Fehlversuche ohne gültiges Token je Minute und Absenderadresse (ab 1.1.0) – Bremse gegen Durchprobieren. */
+    public const AUTH_FAILURES_PER_MINUTE = 30;
+
+    /** Zähler der Fehlversuche liegen in tl_velundo_rate oberhalb der Token-Kennungen (token_id ist unsigned int). */
+    private const AUTH_KEY_BASE = 1_000_000_000;
+
     /** @var callable(): int */
     private $clock;
 
@@ -33,10 +39,27 @@ final class RateLimiter
      */
     public function hit(int $tokenId): array
     {
-        $limit = max(1, $this->settings->rateLimitPerMinute());
+        return $this->hitKey($tokenId, max(1, $this->settings->rateLimitPerMinute()));
+    }
+
+    /**
+     * Zählt einen Fehlversuch (kein gültiges Token) je Absenderadresse; über der Grenze antwortet die Schnittstelle 429
+     * statt 401. Die Adresse wird nicht gespeichert, nur ein Schlüssel aus ihrem Hash.
+     *
+     * @return array{allowed: bool, limit: int, remaining: int, retry_after: int}
+     */
+    public function hitAuthFailure(string $remoteAddress): array
+    {
+        $key = self::AUTH_KEY_BASE + (int)(hexdec(substr(hash('sha256', 'auth:' . $remoteAddress), 0, 7)) % 1_000_000_000);
+        return $this->hitKey($key, self::AUTH_FAILURES_PER_MINUTE);
+    }
+
+    /** @return array{allowed: bool, limit: int, remaining: int, retry_after: int} */
+    private function hitKey(int $key, int $limit): array
+    {
         $now = ($this->clock)();
         $window = intdiv($now, self::WINDOW);
-        $count = $this->store->increment($tokenId, $window);
+        $count = $this->store->increment($key, $window);
         if ($count === 1) {
             $this->store->prune($window - self::KEEP_WINDOWS);
         }

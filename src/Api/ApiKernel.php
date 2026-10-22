@@ -39,7 +39,7 @@ final class ApiKernel
      * @param array<string, mixed> $query
      * @return array{status: int, data: array<string, mixed>, headers: array<string, string>}
      */
-    public function handle(string $method, string $apiPath, array $query, string $body, ?string $authorization, ?string $velundoToken, bool $secure, string $host = ''): array
+    public function handle(string $method, string $apiPath, array $query, string $body, ?string $authorization, ?string $velundoToken, bool $secure, string $host = '', string $remoteAddress = ''): array
     {
         $tokenName = null;
         $status = 500;
@@ -48,7 +48,7 @@ final class ApiKernel
             if ($this->system !== null) {
                 PlainText::useStorageOf($this->system->contaoVersion());
             }
-            $result = $this->dispatch($method, $apiPath, $query, $body, $authorization, $velundoToken, $secure, $host, $tokenName);
+            $result = $this->dispatch($method, $apiPath, $query, $body, $authorization, $velundoToken, $secure, $host, $remoteAddress, $tokenName);
             $status = $result->status;
             return ['status' => $result->status, 'data' => $result->data, 'headers' => $result->headers];
         } catch (ApiException $e) {
@@ -75,7 +75,7 @@ final class ApiKernel
     }
 
     /** @param array<string, mixed> $query */
-    private function dispatch(string $method, string $apiPath, array $query, string $body, ?string $authorization, ?string $velundoToken, bool $secure, string $host, ?string &$tokenName): Result
+    private function dispatch(string $method, string $apiPath, array $query, string $body, ?string $authorization, ?string $velundoToken, bool $secure, string $host, string $remoteAddress, ?string &$tokenName): Result
     {
         // Erst das Token: ohne gültiges Token antwortet die Schnittstelle immer 401 (Vertrag), auch über http
         $token = $this->tokens->authenticate(self::authorizationHeader($authorization, $velundoToken));
@@ -84,6 +84,11 @@ final class ApiKernel
             $token = $this->tokens->authenticate('Bearer ' . trim((string)$velundoToken));
         }
         if ($token === null) {
+            // Bremse vor der Token-Prüfung: zu viele Fehlversuche je Absenderadresse → 429 statt 401
+            $failures = $this->rateLimiter->hitAuthFailure($remoteAddress);
+            if (!$failures['allowed']) {
+                throw ApiException::rateLimited($failures['retry_after']);
+            }
             throw ApiException::unauthorized();
         }
         $tokenName = $token['name'];
@@ -95,7 +100,7 @@ final class ApiKernel
             throw ApiException::rateLimited($rate['retry_after']);
         }
         $route = $this->router->match($method, $apiPath);
-        $request = new ApiRequest(strtoupper($method), $query, $body, $route['id'], $token['name'], $host);
+        $request = new ApiRequest(strtoupper($method), $query, $body, $route['id'], $token['name'], $host, $token['scopes'] ?? []);
         $handler = $this->handlers[$route['area']] ?? throw ApiException::notFound();
         return $handler->handle($route['action'], $request);
     }

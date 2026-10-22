@@ -9,13 +9,13 @@ namespace Velundo\ContaoConnect\Service\Store;
  */
 final class ArrayTokenStore implements TokenStoreInterface
 {
-    /** @var array<int, array{id: int, name: string, token_hash: string, created: int, last_used: int, revoked: int}> */
+    /** @var array<int, array{id: int, name: string, token_hash: string, created: int, last_used: int, revoked: int, scopes: string}> */
     public array $rows = [];
 
-    public function insert(string $name, string $hash, int $created): int
+    public function insert(string $name, string $hash, int $created, string $scopes = ''): int
     {
         $id = $this->rows === [] ? 1 : max(array_keys($this->rows)) + 1;
-        $this->rows[$id] = ['id' => $id, 'name' => $name, 'token_hash' => $hash, 'created' => $created, 'last_used' => 0, 'revoked' => 0];
+        $this->rows[$id] = ['id' => $id, 'name' => $name, 'token_hash' => $hash, 'created' => $created, 'last_used' => 0, 'revoked' => 0, 'scopes' => $scopes];
         return $id;
     }
 

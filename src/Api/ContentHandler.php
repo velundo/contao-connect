@@ -157,8 +157,16 @@ final class ContentHandler implements HandlerInterface
             throw ApiException::validation('Feld „text“ darf nicht leer sein.', ['field' => 'text'], 'empty_value');
         }
         $changes->set('text', $text, PlainText::html((string)($row['text'] ?? '')));
-        $changes->flag('invisible', Validate::bool($body, 'invisible'), $item['invisible']);
+        $invisible = Validate::bool($body, 'invisible');
+        $changes->flag('invisible', $invisible, $item['invisible']);
         $changes->requireAny(self::WRITABLE);
+        // Zusatzrechte des Tokens: Sichtbarschalten und Live-Änderungen an sichtbaren Elementen
+        if ($invisible === false && $item['invisible']) {
+            $request->require('publish', 'Das Sichtbarschalten eines Inhaltselements');
+        }
+        if (($headline !== null || $unit !== null || $text !== null) && !$item['invisible'] && $invisible !== true) {
+            $request->require('live_edit', 'Das Ändern von Überschrift oder Text eines sichtbaren Inhaltselements');
+        }
 
         $ptable = $item['ptable'];
         $this->writer->update('tl_content', $id, $changes->data(), $ptable === 'tl_news' ? 'news' : 'article', Writer::tags('tl_content', $id, $ptable, (int)$row['pid']),

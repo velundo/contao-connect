@@ -27,7 +27,7 @@ final class VersionTest extends TestCase
         if (!class_exists('Contao\\DC_Table')) {
             eval('namespace Contao; class DC_Table {}');
         }
-        foreach (['tl_velundo_token' => ['token_hash', 'revoked', 'last_used'], 'tl_velundo_rate' => ['token_id', 'window_start', 'hits']] as $table => $fields) {
+        foreach (['tl_velundo_token' => ['token_hash', 'revoked', 'last_used', 'scopes'], 'tl_velundo_rate' => ['token_id', 'window_start', 'hits']] as $table => $fields) {
             require $root . '/contao/dca/' . $table . '.php';
             $dca = $GLOBALS['TL_DCA'][$table];
             self::assertSame('primary', $dca['config']['sql']['keys']['id']);

@@ -11,13 +11,13 @@ namespace Velundo\ContaoConnect\Service\Store;
  */
 interface TokenStoreInterface
 {
-    /** Neues Token; Rückgabe: Kennung (id). */
-    public function insert(string $name, string $hash, int $created): int;
+    /** Neues Token; $scopes als kommagetrennte Liste (ab 1.1.0, leer = keine Zusatzrechte). Rückgabe: Kennung (id). */
+    public function insert(string $name, string $hash, int $created, string $scopes = ''): int;
 
     /**
-     * Alle Tokens, auch widerrufene.
+     * Alle Tokens, auch widerrufene. `scopes` ist die kommagetrennte Liste der Zusatzrechte ('' bei Tokens aus 1.0.x).
      *
-     * @return list<array{id: int, name: string, token_hash: string, created: int, last_used: int, revoked: int}>
+     * @return list<array{id: int, name: string, token_hash: string, created: int, last_used: int, revoked: int, scopes: string}>
      */
     public function all(): array;
 

@@ -22,6 +22,7 @@ final class ApiRequest
 
     /**
      * @param array<string, mixed> $query
+     * @param list<string> $scopes Zusatzrechte des Tokens (TokenService::SCOPES)
      */
     public function __construct(
         public readonly string $method,
@@ -30,7 +31,27 @@ final class ApiRequest
         public readonly ?int $id = null,
         public readonly string $tokenName = '',
         public readonly string $host = '',
+        public readonly array $scopes = [],
     ) {}
+
+    /** Hat das Token das Zusatzrecht? */
+    public function can(string $scope): bool
+    {
+        return in_array($scope, $this->scopes, true);
+    }
+
+    /** 403 `scope_<recht>`, wenn das Token das Zusatzrecht nicht hat; $what beschreibt die verweigerte Handlung. */
+    public function require(string $scope, string $what): void
+    {
+        if (!$this->can($scope)) {
+            throw ApiException::forbidden('scope_' . $scope, sprintf(
+                '%s erfordert das Zusatzrecht „%s“ des Tokens. Ein Token mit diesem Recht erzeugt: vendor/bin/contao-console velundo:token create "<Bezeichnung>" --allow-%s',
+                $what,
+                $scope,
+                str_replace('_', '-', $scope)
+            ));
+        }
+    }
 
     public function has(string $name): bool
     {
