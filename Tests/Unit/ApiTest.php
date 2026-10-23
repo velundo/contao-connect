@@ -70,6 +70,9 @@ final class ApiTest extends TestCase
         self::assertSame(InfoHandler::BUNDLE_VERSION, $r['data']['bundle']);
         self::assertSame(['news' => true, 'calendar' => false, 'http_cache' => true], $r['data']['features']);
         self::assertSame(['max_text_kb' => 200, 'rate_limit_per_minute' => 1000, 'limit_max' => 200], $r['data']['limits']);
+        self::assertSame(['name' => 'Agentur Test', 'scopes' => ['publish', 'live_edit']], $r['data']['token']);
+        $plain = $this->site->tokens->create('Nur Entwürfe')['token'];
+        self::assertSame(['name' => 'Nur Entwürfe', 'scopes' => []], $this->site->call('GET', 'v1/info', null, [], $plain)['data']['token']);
         self::assertCount(2, $r['data']['roots']);
         self::assertSame(['id' => 1, 'title' => 'Agentur Test', 'dns' => 'www.example.de', 'language' => 'de', 'fallback' => true, 'published' => true, 'maintenance' => false, 'base' => 'https://www.example.de/'], $r['data']['roots'][0]);
         self::assertSame('https://en.example.de/en/', $r['data']['roots'][1]['base']);

@@ -18,7 +18,7 @@ use Velundo\ContaoConnect\Service\Settings;
 final class InfoHandler implements HandlerInterface
 {
     // Muss composer.json (extra.velundo-version) und CHANGELOG.md entsprechen (Prüfung VersionTest)
-    public const BUNDLE_VERSION = '1.1.0';
+    public const BUNDLE_VERSION = '1.1.1';
 
     public function __construct(
         private readonly Db $db,
@@ -54,6 +54,12 @@ final class InfoHandler implements HandlerInterface
                 'max_text_kb' => $this->settings->maxTextKb(),
                 'rate_limit_per_minute' => $this->settings->rateLimitPerMinute(),
                 'limit_max' => ApiRequest::LIMIT_MAX,
+            ],
+            // Das aufrufende Token (ab 1.1.1): Bezeichnung und Zusatzrechte – die App zeigt so schon auf der
+            // Verbindungsseite, ob Veröffentlichen und Live-Änderungen möglich sind, statt erst beim Ausführen zu scheitern
+            'token' => [
+                'name' => $request->tokenName,
+                'scopes' => $request->scopes,
             ],
         ]);
     }

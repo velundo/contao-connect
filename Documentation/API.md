@@ -47,7 +47,9 @@ API nutzt. Beide Seiten halten sich wörtlich an diesen Vertrag. Marke klein „
 
 ## Lesen
 - `GET info` → `{"contao":"5.3.12","php":"8.3.x","bundle":"1.0.0","roots":[{"id":1,"title":"…","dns":"www.example.de","language":"de","fallback":true,"published":true,"maintenance":false,"base":"https://www.example.de/"}],"features":{"news":bool,"calendar":bool,"http_cache":bool},"limits":{"max_text_kb":200,"rate_limit_per_minute":120,"limit_max":200}}`
-  (`base`: Schema aus `useSSL`, Host aus `dns` oder – leer – dem Host der Anfrage, dazu `urlPrefix`)
+  (`base`: Schema aus `useSSL`, Host aus `dns` oder – leer – dem Host der Anfrage, dazu `urlPrefix`; ab 1.1.1 zusätzlich
+  `"token":{"name":"<Bezeichnung>","scopes":["publish","live_edit"]}` – das aufrufende Token mit seinen Zusatzrechten,
+  leere Liste = keine)
 - `GET system` → `{"contao":…,"php":…,"environment":"prod","bundles":["ContaoCoreBundle",…],"packages":[{"name":"contao/news-bundle","type":"contao-bundle","version":"5.3.12"}],"cron_last_run":"…"|null}`
   (ab 1.1.0 nur Bundles mit Kurznamen `Contao…`/`Velundo…` und Pakete `contao/*`, `velundo/*` – keine Inventarliste;
   Pakete der Typen `contao-bundle`, `contao-module`, `contao-theme`, `symfony-bundle` laut Composer;
