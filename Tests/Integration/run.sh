@@ -33,6 +33,9 @@ sql "CREATE DATABASE IF NOT EXISTS \`$DB_NAME\` CHARACTER SET utf8mb4 COLLATE ut
 printf '\nDATABASE_URL=mysql://%s:%s@%s:%s/%s\n' "$DB_USER" "$DB_PASS" "$DB_HOST" "$DB_PORT" "$DB_NAME" >> .env.local
 require_https false
 console contao:migrate --no-interaction --no-backup
+# wirksame Einstellungen des Bundles und Konfigurationsdateien der Installation
+console debug:config velundo_contao_connect --env=prod
+ls -la config
 echo "::endgroup::"
 
 # Testdaten wie im Backend angelegt: Startpunkt, eine veröffentlichte Seite mit Artikel, ein Nachrichtenarchiv
@@ -55,12 +58,19 @@ read -r _ FULL < <(token "CI alle Rechte" --allow-publish --allow-live-edit)
 test -n "$PLAIN" && test -n "$PUBLISH" && test -n "$FULL" && test -n "$PLAIN_ID"
 console velundo:token list
 
-"$PHP" -S "127.0.0.1:$PORT" -t public public/index.php > "$SITE/server.log" 2>&1 &
-SERVER=$!
-trap 'kill "$SERVER" 2> /dev/null || true' EXIT
-curl -s -o /dev/null --retry 30 --retry-connrefused --retry-delay 1 "http://127.0.0.1:$PORT/"
+# Nach dem Ändern einer Einstellung läuft ein neuer Server auf dem nächsten Port: Der Opcache der alten Instanz hält
+# sonst den alten Container, und ihre Worker könnten den Port noch kurz belegen.
+SERVERS=()
+start_server() {
+  "$PHP" -S "127.0.0.1:$1" -t public public/index.php >> "$SITE/server.log" 2>&1 &
+  SERVERS+=($!)
+  curl -s -o /dev/null --retry 30 --retry-connrefused --retry-delay 1 "http://127.0.0.1:$1/"
+  export VL_BASE="http://127.0.0.1:$1/_velundo/v1/"
+}
+trap 'kill "${SERVERS[@]}" 2> /dev/null || true' EXIT
+start_server "$PORT"
 
-export VL_BASE="http://127.0.0.1:$PORT/_velundo/v1/" VL_TOKEN="$PLAIN" VL_TOKEN_PUBLISH="$PUBLISH" VL_TOKEN_FULL="$FULL"
+export VL_TOKEN="$PLAIN" VL_TOKEN_PUBLISH="$PUBLISH" VL_TOKEN_FULL="$FULL"
 export VL_DB_DSN="mysql:host=$DB_HOST;port=$DB_PORT;dbname=$DB_NAME;charset=utf8mb4" VL_DB_USER="$DB_USER" VL_DB_PASS="$DB_PASS"
 
 echo "::group::Endpunkte"
@@ -71,4 +81,5 @@ console velundo:token revoke "$PLAIN_ID"
 VL_MODE=revoked "$PHP" "$EXT/Tests/Integration/api-check.php"
 
 require_https true
+start_server "$((PORT + 1))"
 VL_MODE=https VL_TOKEN="$FULL" "$PHP" "$EXT/Tests/Integration/api-check.php"
