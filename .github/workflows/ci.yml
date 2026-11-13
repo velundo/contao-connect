@@ -1,0 +1,108 @@
+name: CI
+
+on:
+  # jeder Push, auch eines Tags
+  push:
+  workflow_dispatch:
+
+# Die Jobs lesen nur das Repo – nichts wird veröffentlicht oder zurückgeschrieben
+permissions:
+  contents: read
+
+jobs:
+  versions:
+    name: Paket und Version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+      - name: composer.json gültig
+        run: composer validate --no-check-publish --no-check-lock
+      - name: composer.json, Versionskonstante, CHANGELOG und Tag nennen dieselbe Version
+        run: |
+          COMPOSER=$(php -r 'echo json_decode(file_get_contents("composer.json"), true)["extra"]["velundo-version"] ?? "";')
+          CONSTANT=$(sed -nE "s/.*BUNDLE_VERSION = '([^']+)'.*/\1/p" src/Api/InfoHandler.php)
+          echo "composer.json $COMPOSER, InfoHandler $CONSTANT"
+          echo "$COMPOSER" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'
+          test "$COMPOSER" = "$CONSTANT"
+          grep -q "^## $COMPOSER " CHANGELOG.md
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            echo "Tag $GITHUB_REF_NAME"
+            test "$GITHUB_REF_NAME" = "v$COMPOSER"
+          fi
+      - name: Skripte der Integrationsprüfung
+        run: bash -n Tests/Integration/run.sh
+
+  unit:
+    name: Prüfstand (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.2', '8.3', '8.4', '8.5']
+    steps:
+      - uses: actions/checkout@v5
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: pdo_sqlite
+          coverage: none
+      - name: Syntax
+        run: find . -path ./.git -prune -o -name '*.php' -print0 | xargs -0 -n1 php -l
+      # ohne Composer und ohne Contao (Ersatz für DBAL auf SQLite): hängt von keinem fremden Dienst ab
+      - name: Prüfungen
+        run: php Tests/smoke.php
+
+  integration:
+    name: Contao ${{ matrix.contao }} (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    needs: unit
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { contao: '5.3', php: '8.2' }
+          - { contao: '5.7', php: '8.3' }
+          - { contao: '6.0', php: '8.4' }
+          - { contao: '6.0', php: '8.5' }
+    env:
+      PHP_CLI_SERVER_WORKERS: '4'
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: extension
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: pdo_mysql, intl, gd
+          coverage: none
+      - name: MySQL starten
+        # auf dem Runner vorinstalliert, Benutzer root mit Kennwort root
+        run: sudo systemctl start mysql.service
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/composer
+          key: composer-contao${{ matrix.contao }}-php${{ matrix.php }}-${{ github.run_id }}
+          restore-keys: composer-contao${{ matrix.contao }}-php${{ matrix.php }}-
+      - name: Contao Managed Edition mit dem Bundle installieren
+        run: |
+          install() {
+            rm -rf site
+            composer create-project "contao/managed-edition:${{ matrix.contao }}.*" site --no-install --no-interaction --no-progress || return 1
+            # eine Plattform-Vorgabe der Distribution gilt hier nicht – es zählt die PHP-Version des Jobs
+            composer -d site config --unset platform.php
+            composer -d site config repositories.local path ../extension
+            # require installiert alles und führt danach die Skripte der Managed Edition aus (contao-setup)
+            composer -d site require "velundo/contao-connect:@dev" "contao/news-bundle:${{ matrix.contao }}.*" --no-interaction --no-progress -W
+          }
+          # ein zweiter Versuch, damit ein kurzer Ausfall von Packagist oder GitHub keinen Fehlschlag meldet
+          install || { sleep 60; install; }
+          composer -d site show | grep -E '^(contao/core-bundle|contao/news-bundle|doctrine/dbal|symfony/http-kernel|velundo)'
+      - name: Schnittstelle prüfen
+        run: VL_CONTAO='${{ matrix.contao }}' bash extension/Tests/Integration/run.sh site 8080
+      - name: Protokoll des Servers
+        if: failure()
+        run: tail -n 100 site/server.log site/var/logs/*.log 2> /dev/null || true

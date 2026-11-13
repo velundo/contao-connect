@@ -169,7 +169,19 @@ Backend (Contao 5 kodiert, Contao 6 roh), `Input::stripTags()` mit den erlaubten
 ```bash
 php Tests/smoke.php                  # alle Prüfungen ohne Contao (PHP 8.2 und 8.5), Endpunkte gegen SQLite
 vendor/bin/phpunit Tests/Unit        # dieselben Prüfungen mit PHPUnit, falls installiert
+Tests/Integration/run.sh <Contao-Verzeichnis> [<Port>]  # Endpunkte gegen eine frische Managed Edition (MySQL)
 ```
+
+**CI** (`.github/workflows/ci.yml`, bei jedem Push): Version und `composer.json`, Syntax und `Tests/smoke.php` auf
+PHP 8.2–8.5 (ohne Composer, unabhängig von fremden Diensten), danach je eine echte Contao Managed Edition auf MySQL,
+gegen die `Tests/Integration/run.sh` `contao:migrate`, alle Endpunkte, Zusatzrechte, Widerruf, HTTPS-Pflicht,
+Protokoll (`tl_log`), Versionen (`tl_version`) und die Speicherform der Klartextfelder prüft: Contao 5.3 (PHP 8.2),
+5.7 (PHP 8.3), 6.0 (PHP 8.4 und 8.5).
+
+**Neue Version:** `extra.velundo-version` in `composer.json` und `InfoHandler::BUNDLE_VERSION` anheben, Abschnitt
+`## X.Y.Z – JJJJ-MM-TT` in `CHANGELOG.md`, committen, nach grüner CI den Tag `vX.Y.Z` setzen und pushen. Packagist liest
+den Tag selbst ein (Webhook); `.github/workflows/release.yml` legt das GitHub-Release an. Tests und CI sind über
+`.gitattributes` nicht im Paket.
 
 Aufbau: `src/Controller/ApiController.php` (Symfony-Einstieg), `src/Api/ApiKernel.php` (Token, HTTPS, Ratenbegrenzung,
 Routing) und `src/Api/*Handler.php` je Bereich, `src/Service/*` (TokenService, RateLimiter, HtmlSanitizer, PlainText,
