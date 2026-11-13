@@ -78,6 +78,8 @@ jobs:
         with:
           php-version: ${{ matrix.php }}
           extensions: pdo_mysql, intl, gd
+          # ohne Opcache: geänderte Einstellungen gelten sofort, kein veralteter Code zwischen den Schritten
+          ini-values: opcache.enable_cli=0
           coverage: none
       - name: MySQL starten
         # auf dem Runner vorinstalliert, Benutzer root mit Kennwort root
@@ -105,4 +107,4 @@ jobs:
         run: VL_CONTAO='${{ matrix.contao }}' bash extension/Tests/Integration/run.sh site 8080
       - name: Protokoll des Servers
         if: failure()
-        run: tail -n 100 site/server.log site/var/logs/*.log 2> /dev/null || true
+        run: tail -n 100 site/server.log site/var/log/*.log site/var/logs/*.log 2> /dev/null || true

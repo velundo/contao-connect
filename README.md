@@ -5,7 +5,8 @@ SEO-Felder und Nachrichten (contao/news-bundle) und ändert sie – gezielt, mit
 Verbindlich ist der Schnittstellenvertrag in `Documentation/API.md`.
 
 - Composer-Paket `velundo/contao-connect`, Typ `contao-bundle`, Namespace `Velundo\ContaoConnect`
-- Contao 5.3 LTS oder neuer, auch Contao 6 (`contao/core-bundle ^5.3 || ^6.0`), PHP ≥ 8.2, Lizenz LGPL-3.0-or-later
+- Contao 5.3 LTS oder neuer, auch Contao 6 (`contao/core-bundle ^5.3 || ^6.0`; in der CI geprüft mit 5.3, 5.7 und 6.0),
+  PHP ≥ 8.2, Lizenz LGPL-3.0-or-later
 - Endpunktbasis: `https://<host>/_velundo/v1/` (läuft Contao in einem Unterverzeichnis: `https://<host>/<pfad>/_velundo/v1/`)
 
 ## Installation
@@ -142,8 +143,8 @@ Texten bereits sichtbarer Datensätze eines mit `--allow-live-edit` (siehe „Re
 
 ## Contao 5.3 und 6
 
-Das Bundle läuft mit Contao 5.3 LTS und Contao 6 (geprüft gegen die Quellen von 5.3.52 und 6.0.4: alle Klassen laden,
-Konfiguration, Route und Manager-Plugin funktionieren). Unterschiede, die das Bundle berücksichtigt:
+Das Bundle läuft mit Contao 5.3 LTS bis 5.7 und Contao 6; die CI installiert bei jedem Push Contao 5.3, 5.7 und 6.0
+und ruft alle Endpunkte echt auf (siehe Entwicklung). Unterschiede, die das Bundle berücksichtigt:
 
 | Bereich | Contao 5 | Contao 6 | Im Bundle |
 |---|---|---|---|
@@ -158,11 +159,10 @@ Unverändert in 6.0: Spalten und Speicherformat der genutzten Felder (`tl_conten
 
 ## Live zu prüfen
 
-Noch ohne laufende Installation gebaut: Anlage der Tabellen mit `contao:migrate`, Versionseinträge (`Contao\Versions`
-außerhalb des Backends), Protokoll in `tl_log`, Adressen über den Content-URL-Generator (Seiten, Nachrichten),
-Slug-Erzeugung, Cache-Tags mit dem HTTP-Cache (unter Contao 6: ob `fos_http_cache.cache_manager` in der Managed Edition
-weiter registriert ist – sonst meldet `features.http_cache` false), Darstellung der gespeicherten Titel im Frontend und
-Backend (Contao 5 kodiert, Contao 6 roh), `Input::stripTags()` mit den erlaubten Tags.
+Die CI deckt Anlage der Tabellen mit `contao:migrate`, Versionseinträge, Protokoll in `tl_log`, Seitenadressen über den
+Content-URL-Generator, Aliase, HTML-Bereinigung, `cache/clear` (`features.http_cache` ist auch unter Contao 6 an) und die
+Speicherform der Klartextfelder ab. Offen bleiben: Adressen von Nachrichten, ob die Cache-Tags im HTTP-Cache wirklich
+Seiten leeren, und die Darstellung der gespeicherten Titel im Frontend und Backend (Contao 5 kodiert, Contao 6 roh).
 
 ## Entwicklung
 

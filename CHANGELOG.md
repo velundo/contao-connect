@@ -1,5 +1,12 @@
 # Änderungen
 
+## 1.1.2 – 2026-11-13
+
+- **Geprüft mit echtem Contao:** Die CI installiert bei jedem Push Contao 5.3, 5.7 und 6.0 auf MySQL und ruft alle
+  Endpunkte auf (Zusatzrechte, Widerruf, HTTPS-Pflicht, `tl_log`, `tl_version`, Speicherform der Klartextfelder) –
+  ohne Befund am Bundle. Contao 5.7 ist damit ausdrücklich unterstützt.
+- **Paket ohne Entwicklungsdateien:** Tests und CI-Konfiguration gehören nicht mehr zum Composer-Paket.
+
 ## 1.1.1 – 2026-10-23
 
 - **Token-Rechte in `GET info`:** `token: {name, scopes}` nennt Bezeichnung und Zusatzrechte des aufrufenden Tokens.
